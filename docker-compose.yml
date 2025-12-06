@@ -1,0 +1,27 @@
+services:
+  web:
+    build: .
+    container_name: moodle_stats_web
+    ports:
+      - "8008:8008"
+    volumes:
+      # Código fuente (para desarrollo)
+      - ./moodlestats:/code/moodlestats
+      - ./moodledata:/code/moodledata
+      - ./manage.py:/code/manage.py
+      # Datos persistentes en host
+      - ./data:/code/data
+      - ./staticfiles:/code/staticfiles
+    working_dir: /code
+    environment:
+      - DJANGO_SETTINGS_MODULE=moodlestats.settings
+      - DEBUG=True
+      # Configuración de Moodle DB
+      - MOODLE_DB_HOST=172.17.0.1
+      - MOODLE_DB_PORT=3306
+      - MOODLE_DB_NAME=app3ecounrcedu_moodle
+      - MOODLE_DB_USER=app3ecounrcedu_moodle
+      - MOODLE_DB_PASSWORD=Iphone#162024
+      - MOODLE_DB_PREFIX=mdl_
+    command: ["/code/entrypoint.sh"]
+    restart: unless-stopped
