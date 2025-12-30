@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}Detección de Anomalías - Romanova{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>🔍 Detección de Anomalías con Isolation Forest</h2>
+    <p class="subtitle">Identificación automática de patrones inusuales y comportamientos atípicos en cursos</p>
+
+    <div class="card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; margin-bottom: 30px;">
+        <h3 style="margin-top: 0; color: white;">📊 Resumen del Análisis</h3>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px;">
+            <div style="text-align: center;">
+                <div style="font-size: 36px; font-weight: bold;">{{ total_courses_analyzed }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">Cursos Analizados</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 36px; font-weight: bold; color: #fef3c7;">{{ anomalies_detected }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">Anomalías Detectadas</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 36px; font-weight: bold;">{{ contamination_rate }}%</div>
+                <div style="font-size: 14px; opacity: 0.9;">Tasa de Contaminación</div>
+            </div>
+        </div>
+    </div>
+
+    {% if anomalies %}
+    <div class="card">
+        <h3>⚠️ Cursos con Comportamiento Anómalo</h3>
+        <p style="color: #6b7280; margin-bottom: 20px;">
+            Isolation Forest ha identificado {{ anomalies|length }} cursos con patrones estadísticamente inusuales.
+            Score más alto = anomalía más extrema.
+        </p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Curso</th>
+                    <th>Tipo de Anomalía</th>
+                    <th>Score</th>
+                    <th>Inscritos</th>
+                    <th>Engagement (%)</th>
+                    <th>Accesos/Est.</th>
+                    <th>Ratio Actividad</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for anomaly in anomalies %}
+                <tr style="{% if forloop.counter0 < 3 %}background: #fef2f2;{% endif %}">
+                    <td><strong>{{ anomaly.course.shortname }}</strong></td>
+                    <td>
+                        <span style="font-size: 13px; padding: 4px 8px; background: #fee; color: #dc3545; border-radius: 6px;">
+                            {{ anomaly.anomaly_types }}
+                        </span>
+                    </td>
+                    <td>
+                        <strong style="font-size: 16px; color: #dc3545;">{{ anomaly.anomaly_score }}</strong>
+                    </td>
+                    <td>{{ anomaly.total_enrolled }}</td>
+                    <td>
+                        <span style="font-weight: 600; color: {% if anomaly.engagement_rate < 20 %}#ef4444{% elif anomaly.engagement_rate < 50 %}#f59e0b{% else %}#10b981{% endif %}">
+                            {{ anomaly.engagement_rate }}%
+                        </span>
+                    </td>
+                    <td>{{ anomaly.accesses_per_student }}</td>
+                    <td>{{ anomaly.activity_ratio }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card" style="margin-top: 30px; background: #f0f9ff;">
+        <h3 style="color: #0369a1;">🔍 Tipos de Anomalías Detectadas</h3>
+        <div style="color: #075985; line-height: 1.8;">
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #ef4444;">
+                <strong>📉 Engagement Crítico:</strong> Menos del 20% de estudiantes inscritos han accedido recientemente.
+                <br><strong>Acción:</strong> Revisar contenido, verificar notificaciones, contactar profesor urgentemente.
+            </div>
+
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #f59e0b;">
+                <strong>📈 Actividad Excesiva:</strong> Más de 100 accesos promedio por estudiante (puede indicar problemas técnicos o bots).
+                <br><strong>Acción:</strong> Revisar logs de acceso, verificar si hay actividad automatizada, validar métricas.
+            </div>
+
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #dc3545;">
+                <strong>⚠️ Declive Reciente:</strong> Actividad de la última semana <20% de la actividad histórica.
+                <br><strong>Acción:</strong> Investigar qué cambió (exámenes terminaron, contenido se agotó, problema técnico).
+            </div>
+
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #10b981;">
+                <strong>🚀 Pico Inusual:</strong> Actividad reciente >5x la actividad histórica (puede ser positivo o negativo).
+                <br><strong>Acción:</strong> Identificar causa (deadline cercano, nuevo contenido popular, campaña de marketing).
+            </div>
+
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #6b7280;">
+                <strong>🔍 Patrón Atípico:</strong> Combinación inusual de métricas que no encaja en categorías anteriores.
+                <br><strong>Acción:</strong> Análisis manual detallado para entender la causa raíz.
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top: 30px; background: #fef3c7;">
+        <h3 style="color: #78350f;">💡 ¿Cómo funciona Isolation Forest?</h3>
+        <div style="color: #78350f; line-height: 1.8;">
+            <p>
+                <strong>Isolation Forest</strong> es un algoritmo de Machine Learning diseñado específicamente para detectar outliers (valores atípicos).
+                Funciona "aislando" puntos de datos anómalos, que son más fáciles de separar del resto.
+            </p>
+
+            <p><strong>¿Por qué es útil?</strong></p>
+            <ul>
+                <li><strong>No requiere etiquetas:</strong> Aprende automáticamente qué es "normal" sin necesitar ejemplos previos de anomalías</li>
+                <li><strong>Detecta patrones complejos:</strong> Identifica anomalías multidimensionales que serían invisibles mirando una métrica a la vez</li>
+                <li><strong>Escalable:</strong> Funciona eficientemente con grandes volúmenes de datos</li>
+            </ul>
+
+            <p><strong>Tasa de Contaminación ({{ contamination_rate }}%):</strong></p>
+            <p style="margin-left: 20px;">
+                Parámetro que controla cuántos cursos se consideran anómalos. Un 10% significa que esperamos que ~1 de cada 10 cursos
+                tenga comportamiento inusual. Ajustable según las características de tu institución.
+            </p>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert">
+        <p>No se detectaron anomalías en los {{ total_courses_analyzed }} cursos analizados, o no hay suficientes datos (mínimo 10 cursos).</p>
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 30px;">
+        <a href="{% url 'analytics_menu' %}" class="button">← Volver al menú de estadísticas</a>
+    </div>
+</div>
+{% endblock %}

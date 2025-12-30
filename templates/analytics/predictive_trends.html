@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Análisis Predictivo de Tendencias - Romanova{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>📈 Análisis Predictivo de Tendencias Multi-Variable</h2>
+    <p class="subtitle">Predicción avanzada de accesos y engagement para los próximos {{ weeks_predicted }} semanas</p>
+
+    {% if predictions %}
+    <div class="card" style="margin-bottom: 30px;">
+        <h3>📊 Predicciones por Curso</h3>
+        <p style="color: #6b7280; margin-bottom: 20px;">
+            Análisis de {{ weeks_analyzed }} semanas de histórico para predecir tendencias futuras en accesos y engagement.
+        </p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Curso</th>
+                    <th>Accesos Actuales (Prom.)</th>
+                    <th>Engagement Actual (%)</th>
+                    <th>Predicción Accesos (4 sem)</th>
+                    <th>Predicción Engagement (4 sem)</th>
+                    <th>Tendencia</th>
+                    <th>Confianza</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pred in predictions %}
+                <tr>
+                    <td><strong>{{ pred.course.shortname }}</strong></td>
+                    <td>{{ pred.current_avg_accesses }}</td>
+                    <td>{{ pred.current_avg_engagement }}%</td>
+                    <td>
+                        {% for val in pred.predicted_accesses %}
+                            <span style="display: inline-block; padding: 2px 6px; background: #dbeafe; border-radius: 4px; margin: 2px; font-size: 12px;">
+                                {{ val }}
+                            </span>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% for val in pred.predicted_engagement %}
+                            <span style="display: inline-block; padding: 2px 6px; background: #fef3c7; border-radius: 4px; margin: 2px; font-size: 12px;">
+                                {{ val }}%
+                            </span>
+                        {% endfor %}
+                    </td>
+                    <td>{{ pred.trend }}</td>
+                    <td>
+                        <div style="font-size: 12px; color: #6b7280;">
+                            Accesos: {{ pred.confidence_accesses }}%<br>
+                            Engagement: {{ pred.confidence_engagement }}%
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card" style="background: #f0f9ff;">
+        <h3 style="color: #0369a1;">💡 Interpretación</h3>
+        <div style="color: #075985; line-height: 1.8;">
+            <p><strong>¿Cómo leer las predicciones?</strong></p>
+            <ul>
+                <li><strong>🟢 Crecimiento Sostenido:</strong> Accesos crecen >5/semana Y engagement >1%. Excelente señal.</li>
+                <li><strong>🟡 Estable:</strong> Variaciones moderadas. Monitorear para mantener estabilidad.</li>
+                <li><strong>🔴 Declive Preocupante:</strong> Accesos caen >5/semana O engagement <-2%. Intervención urgente.</li>
+            </ul>
+
+            <p><strong>Nivel de Confianza:</strong></p>
+            <ul>
+                <li>>70% = Alta confianza en la predicción</li>
+                <li>40-70% = Confianza moderada, factores externos pueden influir</li>
+                <li><40% = Baja confianza, datos muy variables</li>
+            </ul>
+
+            <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 8px; border-left: 4px solid #0ea5e9;">
+                <strong>🎯 Acciones Recomendadas:</strong>
+                <ul style="margin-top: 10px;">
+                    <li>Cursos en <strong>declive</strong>: Revisar contenido, contactar profesor, encuesta a estudiantes</li>
+                    <li>Cursos en <strong>crecimiento</strong>: Documentar qué está funcionando bien para replicar</li>
+                    <li>Baja <strong>confianza</strong>: Aumentar frecuencia de monitoreo semanal</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert">
+        <p>No hay suficientes datos para generar predicciones (mínimo 4 semanas de histórico por curso).</p>
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 30px;">
+        <a href="{% url 'analytics_menu' %}" class="button">← Volver al menú de estadísticas</a>
+    </div>
+</div>
+{% endblock %}

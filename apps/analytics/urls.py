@@ -24,11 +24,11 @@ urlpatterns = [
     path('heatmap/', views.heatmap_activity, name='heatmap_activity'),
     path('pca/', views.pca_analysis, name='pca_analysis'),
 
-    # Análisis estratégicos y gerenciales
+    # Estadísticas avanzadas (Big Data & IA)
     path('churn/', views.churn_prediction, name='churn_prediction'),
-    path('teachers/', views.teacher_efficiency, name='teacher_efficiency'),
-    path('cohort/', views.cohort_value, name='cohort_value'),
     path('engagement/', views.engagement_patterns, name='engagement_patterns'),
     path('network/', views.course_network, name='course_network'),
-    path('roi/', views.career_roi, name='career_roi'),
+    path('predictive/', views.predictive_trends, name='predictive_trends'),
+    path('segmentation/', views.smart_segmentation, name='smart_segmentation'),
+    path('anomalies/', views.anomaly_detection, name='anomaly_detection'),
 ]

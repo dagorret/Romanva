@@ -26,7 +26,7 @@
     </div>
 
     <!-- Análisis Avanzados -->
-    <h3 style="margin-top: 30px; margin-bottom: 15px; color: #dc3545;">🔬 Análisis Avanzados (Machine Learning)</h3>
+    <h3 style="margin-top: 30px; margin-bottom: 15px; color: #dc3545;">🔬 Estadísticas Avanzadas (Machine Learning & Big Data)</h3>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
         {% for option in stats_options %}
         {% if option.category == 'advanced' %}
@@ -34,27 +34,6 @@
             <div style="background: #fff5f5; border: 2px solid #fee; border-radius: 12px; padding: 20px; transition: all 0.2s; cursor: pointer;"
                  onmouseover="this.style.borderColor='#dc3545'; this.style.background='#ffe5e5';"
                  onmouseout="this.style.borderColor='#fee'; this.style.background='#fff5f5';">
-                <div style="font-size: 32px; margin-bottom: 10px;">{{ option.icon }}</div>
-                <h3 style="margin: 0 0 8px 0; font-size: 18px; color: #111827;">{{ option.name }}</h3>
-                <p style="margin: 0; color: #6b7280; font-size: 14px;">{{ option.description }}</p>
-            </div>
-        </a>
-        {% endif %}
-        {% endfor %}
-    </div>
-
-    <!-- Análisis Estratégicos y Gerenciales -->
-    <h3 style="margin-top: 40px; margin-bottom: 15px; color: #7c3aed;">💼 Análisis Estratégicos y Gerenciales</h3>
-    <p style="margin-bottom: 20px; color: #6b7280; font-size: 14px;">
-        Insights de alto nivel para toma de decisiones ejecutivas: predicción de abandono, ROI, eficiencia docente y patrones de comportamiento.
-    </p>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
-        {% for option in stats_options %}
-        {% if option.category == 'strategic' %}
-        <a href="{% url option.url %}" style="text-decoration: none; color: inherit;">
-            <div style="background: #faf5ff; border: 2px solid #e9d5ff; border-radius: 12px; padding: 20px; transition: all 0.2s; cursor: pointer;"
-                 onmouseover="this.style.borderColor='#7c3aed'; this.style.background='#f3e8ff';"
-                 onmouseout="this.style.borderColor='#e9d5ff'; this.style.background='#faf5ff';">
                 <div style="font-size: 32px; margin-bottom: 10px;">{{ option.icon }}</div>
                 <h3 style="margin: 0 0 8px 0; font-size: 18px; color: #111827;">{{ option.name }}</h3>
                 <p style="margin: 0; color: #6b7280; font-size: 14px;">{{ option.description }}</p>

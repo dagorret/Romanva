@@ -105,48 +105,48 @@ def analytics_menu(request):
                 'icon': '🧬',
                 'category': 'advanced'
             },
-            # Análisis Estratégicos y Gerenciales
+            # Estadísticas Avanzadas (Big Data & IA)
             {
                 'name': 'Predicción de Abandono',
-                'description': 'ML: Random Forest para predecir estudiantes en riesgo de abandono',
+                'description': 'Random Forest ML para predecir estudiantes en riesgo',
                 'url': 'churn_prediction',
                 'icon': '🎯',
-                'category': 'strategic'
-            },
-            {
-                'name': 'Eficiencia Docente',
-                'description': 'Ranking de profesores por engagement y retención estudiantil',
-                'url': 'teacher_efficiency',
-                'icon': '⭐',
-                'category': 'strategic'
-            },
-            {
-                'name': 'Valor de Cohorte',
-                'description': 'ROI por generación de estudiantes (análisis trimestral)',
-                'url': 'cohort_value',
-                'icon': '💰',
-                'category': 'strategic'
+                'category': 'advanced'
             },
             {
                 'name': 'Patrones de Engagement',
                 'description': 'Cuándo estudian: horarios, días, franjas por carrera',
                 'url': 'engagement_patterns',
                 'icon': '⏰',
-                'category': 'strategic'
+                'category': 'advanced'
             },
             {
                 'name': 'Red de Cursos',
-                'description': 'Qué cursos toman juntos los estudiantes (network analysis)',
+                'description': 'Network analysis: qué cursos toman juntos los estudiantes',
                 'url': 'course_network',
                 'icon': '🔗',
-                'category': 'strategic'
+                'category': 'advanced'
             },
             {
-                'name': 'ROI por Carrera',
-                'description': 'Análisis costo-beneficio educativo por carrera',
-                'url': 'career_roi',
-                'icon': '📊',
-                'category': 'strategic'
+                'name': 'Análisis Predictivo de Tendencias',
+                'description': 'Predicción multi-variable con series temporales avanzadas',
+                'url': 'predictive_trends',
+                'icon': '📈',
+                'category': 'advanced'
+            },
+            {
+                'name': 'Segmentación Inteligente',
+                'description': 'K-Means avanzado con perfiles detallados de estudiantes',
+                'url': 'smart_segmentation',
+                'icon': '🎓',
+                'category': 'advanced'
+            },
+            {
+                'name': 'Detección de Anomalías',
+                'description': 'Isolation Forest para detectar comportamientos inusuales',
+                'url': 'anomaly_detection',
+                'icon': '🔍',
+                'category': 'advanced'
             },
         ],
         'total_courses': Course.objects.filter(visible=True).count(),
@@ -990,187 +990,307 @@ def churn_prediction(request):
 
 
 @login_required
-def teacher_efficiency(request):
-    """Análisis de eficiencia docente comparativa"""
-    from collections import defaultdict
+def predictive_trends(request):
+    """Análisis predictivo de tendencias multi-variable"""
+    from scipy import stats
+    import numpy as np
 
-    # Obtener profesores (rol teacher o editingteacher)
-    teacher_roles = Role.objects.filter(shortname__in=['teacher', 'editingteacher'])
+    # Analizar múltiples métricas simultáneamente
+    courses = Course.objects.filter(visible=True)[:15]
 
-    teacher_stats = []
+    predictions = []
 
-    for teacher_role in teacher_roles:
-        # Obtener asignaciones de profesores
-        assignments = RoleAssignment.objects.filter(role=teacher_role).select_related('user', 'course')
+    for course in courses:
+        # Últimos 90 días de datos
+        days = 90
+        date_limit = timezone.now() - timedelta(days=days)
 
-        teacher_data = defaultdict(lambda: {
-            'courses': set(),
-            'total_students': 0,
-            'total_accesses': 0,
-            'active_students': 0,
-        })
+        # Recopilar datos por semana para múltiples variables
+        weeks_data = []
+        for week in range(int(days/7)):
+            week_start = date_limit + timedelta(weeks=week)
+            week_end = week_start + timedelta(days=7)
 
-        for assignment in assignments:
-            teacher = assignment.user
-            course = assignment.course
+            # Variable 1: Accesos
+            accesses = UserLastAccess.objects.filter(
+                course=course,
+                timeaccess__gte=week_start,
+                timeaccess__lt=week_end
+            ).count()
 
-            if course:
-                teacher_data[teacher.id]['user'] = teacher
-                teacher_data[teacher.id]['courses'].add(course)
+            # Variable 2: Usuarios únicos
+            unique_users = UserLastAccess.objects.filter(
+                course=course,
+                timeaccess__gte=week_start,
+                timeaccess__lt=week_end
+            ).values('user').distinct().count()
 
-                # Estudiantes en el curso
-                students = UserEnrolment.objects.filter(enrol__course=course).count()
-                teacher_data[teacher.id]['total_students'] += students
+            # Variable 3: Tasa de engagement
+            total_enrolled = UserEnrolment.objects.filter(enrol__course=course).count()
+            engagement = (unique_users / total_enrolled * 100) if total_enrolled > 0 else 0
 
-                # Accesos de estudiantes en últimos 60 días
-                date_limit = timezone.now() - timedelta(days=60)
-                accesses = UserLastAccess.objects.filter(
-                    course=course,
-                    timeaccess__gte=date_limit
-                ).count()
-                teacher_data[teacher.id]['total_accesses'] += accesses
-
-                # Estudiantes activos (con acceso reciente)
-                active = UserLastAccess.objects.filter(
-                    course=course,
-                    timeaccess__gte=date_limit
-                ).values('user').distinct().count()
-                teacher_data[teacher.id]['active_students'] += active
-
-        # Calcular métricas
-        for teacher_id, data in teacher_data.items():
-            courses_count = len(data['courses'])
-            total_students = data['total_students']
-            total_accesses = data['total_accesses']
-            active_students = data['active_students']
-
-            # Tasa de engagement
-            engagement_rate = (active_students / total_students * 100) if total_students > 0 else 0
-
-            # Accesos promedio por estudiante
-            avg_accesses = (total_accesses / total_students) if total_students > 0 else 0
-
-            # Score de eficiencia (combinación de engagement y accesos)
-            efficiency_score = (engagement_rate * 0.7) + (min(avg_accesses, 50) * 0.6)
-
-            teacher_stats.append({
-                'teacher': data['user'],
-                'courses_count': courses_count,
-                'total_students': total_students,
-                'active_students': active_students,
-                'engagement_rate': round(engagement_rate, 2),
-                'total_accesses': total_accesses,
-                'avg_accesses_per_student': round(avg_accesses, 2),
-                'efficiency_score': round(efficiency_score, 2),
-                'rating': '⭐⭐⭐⭐⭐' if efficiency_score > 80 else '⭐⭐⭐⭐' if efficiency_score > 60 else '⭐⭐⭐' if efficiency_score > 40 else '⭐⭐'
+            weeks_data.append({
+                'accesses': accesses,
+                'unique_users': unique_users,
+                'engagement': engagement
             })
 
-    # Ordenar por score de eficiencia
-    teacher_stats.sort(key=lambda x: x['efficiency_score'], reverse=True)
+        if len(weeks_data) > 3:
+            # Regresión para cada variable
+            x = np.array(range(len(weeks_data)))
 
-    # Promedios globales
-    if teacher_stats:
-        avg_engagement = sum(t['engagement_rate'] for t in teacher_stats) / len(teacher_stats)
-        avg_efficiency = sum(t['efficiency_score'] for t in teacher_stats) / len(teacher_stats)
-    else:
-        avg_engagement = 0
-        avg_efficiency = 0
+            # Predicción de accesos
+            y_accesses = np.array([w['accesses'] for w in weeks_data])
+            slope_acc, intercept_acc, r_acc, _, _ = stats.linregress(x, y_accesses)
+
+            # Predicción de engagement
+            y_engagement = np.array([w['engagement'] for w in weeks_data])
+            slope_eng, intercept_eng, r_eng, _, _ = stats.linregress(x, y_engagement)
+
+            # Proyección próximas 4 semanas
+            future_accesses = []
+            future_engagement = []
+            for i in range(4):
+                future_week = len(weeks_data) + i
+                future_accesses.append(max(0, round(slope_acc * future_week + intercept_acc)))
+                future_engagement.append(max(0, min(100, round(slope_eng * future_week + intercept_eng, 2))))
+
+            # Clasificación de tendencia
+            if slope_acc > 5 and slope_eng > 1:
+                trend = '🟢 Crecimiento Sostenido'
+            elif slope_acc < -5 or slope_eng < -2:
+                trend = '🔴 Declive Preocupante'
+            else:
+                trend = '🟡 Estable'
+
+            predictions.append({
+                'course': course,
+                'current_avg_accesses': round(sum([w['accesses'] for w in weeks_data]) / len(weeks_data), 2),
+                'current_avg_engagement': round(sum([w['engagement'] for w in weeks_data]) / len(weeks_data), 2),
+                'predicted_accesses': future_accesses,
+                'predicted_engagement': future_engagement,
+                'trend': trend,
+                'confidence_accesses': round(r_acc ** 2 * 100, 2),
+                'confidence_engagement': round(r_eng ** 2 * 100, 2),
+            })
 
     context = {
-        'teachers': teacher_stats,
-        'total_teachers': len(teacher_stats),
-        'avg_engagement_rate': round(avg_engagement, 2),
-        'avg_efficiency_score': round(avg_efficiency, 2),
-        'top_performer': teacher_stats[0] if teacher_stats else None,
+        'predictions': predictions,
+        'weeks_analyzed': 12,
+        'weeks_predicted': 4,
     }
-    return render(request, 'analytics/teacher_efficiency.html', context)
+    return render(request, 'analytics/predictive_trends.html', context)
 
 
 @login_required
-def cohort_value(request):
-    """Análisis de valor de cohorte - ROI por generación"""
-    from collections import defaultdict
+def smart_segmentation(request):
+    """Segmentación inteligente de estudiantes con perfiles detallados"""
+    from sklearn.cluster import KMeans
+    from sklearn.preprocessing import StandardScaler
+    import numpy as np
 
-    # Agrupar por cohorte (trimestre de inscripción)
-    cohorts = defaultdict(lambda: {
-        'students': set(),
-        'total_accesses': 0,
-        'total_courses': 0,
-        'active_count': 0,
-    })
+    # Características extendidas
+    students_data = []
+    students_info = []
 
-    enrollments = UserEnrolment.objects.all().select_related('user', 'enrol__course')
+    for user in MoodleUser.objects.all()[:300]:
+        # Obtener datos completos del estudiante
+        date_limit_30 = timezone.now() - timedelta(days=30)
+        date_limit_90 = timezone.now() - timedelta(days=90)
 
-    for enrollment in enrollments:
-        # Determinar cohorte (año-trimestre)
-        year = enrollment.timecreated.year
-        quarter = (enrollment.timecreated.month - 1) // 3 + 1
-        cohort_key = f"{year}-Q{quarter}"
+        # Métricas de actividad
+        accesses_30 = UserLastAccess.objects.filter(user=user, timeaccess__gte=date_limit_30).count()
+        accesses_90 = UserLastAccess.objects.filter(user=user, timeaccess__gte=date_limit_90).count()
+        courses_enrolled = UserEnrolment.objects.filter(user=user).count()
+        groups_count = GroupMember.objects.filter(user=user).count()
 
-        cohorts[cohort_key]['students'].add(enrollment.user.id)
-        cohorts[cohort_key]['total_courses'] += 1
+        # Consistencia (varianza en accesos semanales)
+        weekly_accesses = []
+        for week in range(4):
+            week_start = timezone.now() - timedelta(weeks=week+1)
+            week_end = timezone.now() - timedelta(weeks=week)
+            week_count = UserLastAccess.objects.filter(
+                user=user,
+                timeaccess__gte=week_start,
+                timeaccess__lt=week_end
+            ).count()
+            weekly_accesses.append(week_count)
 
-        # Accesos del estudiante
-        accesses = UserLastAccess.objects.filter(
-            user=enrollment.user,
-            course=enrollment.enrol.course
-        ).count()
-        cohorts[cohort_key]['total_accesses'] += accesses
+        consistency = np.std(weekly_accesses) if weekly_accesses else 0
 
-        # Verificar si está activo (acceso en últimos 30 días)
-        recent = UserLastAccess.objects.filter(
-            user=enrollment.user,
-            timeaccess__gte=timezone.now() - timedelta(days=30)
-        ).exists()
+        # Diversidad de cursos (accesos a diferentes cursos)
+        unique_courses = UserLastAccess.objects.filter(
+            user=user,
+            timeaccess__gte=date_limit_30
+        ).values('course').distinct().count()
 
-        if recent:
-            cohorts[cohort_key]['active_count'] += 1
+        if accesses_90 > 0:
+            students_data.append([
+                accesses_30,
+                accesses_90,
+                courses_enrolled,
+                groups_count,
+                consistency,
+                unique_courses
+            ])
+            students_info.append({
+                'user': user,
+                'accesses_30': accesses_30,
+                'accesses_90': accesses_90,
+                'courses_enrolled': courses_enrolled,
+                'consistency': round(consistency, 2),
+                'unique_courses': unique_courses,
+            })
 
-    # Calcular métricas de valor
-    cohort_stats = []
-    for cohort_key, data in sorted(cohorts.items(), reverse=True)[:8]:  # Últimos 8 trimestres
-        students_count = len(data['students'])
-        total_accesses = data['total_accesses']
-        total_courses = data['total_courses']
-        active_count = data['active_count']
+    clusters_result = []
+    if len(students_data) >= 4:
+        # Normalizar y clusterizar
+        scaler = StandardScaler()
+        X = scaler.fit_transform(np.array(students_data))
 
-        # Métricas de valor
-        avg_accesses_per_student = total_accesses / students_count if students_count > 0 else 0
-        avg_courses_per_student = total_courses / students_count if students_count > 0 else 0
-        retention_rate = (active_count / students_count * 100) if students_count > 0 else 0
+        n_clusters = min(4, len(students_data))
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+        labels = kmeans.fit_predict(X)
 
-        # Valor de cohorte (métrica combinada)
-        cohort_value = (avg_accesses_per_student * 0.4) + (avg_courses_per_student * 10) + (retention_rate * 0.5)
+        # Definir perfiles
+        profile_names = [
+            '🌟 Súper Activos',
+            '📚 Comprometidos',
+            '⚠️ En Riesgo',
+            '💤 Inactivos'
+        ]
 
-        cohort_stats.append({
-            'cohort': cohort_key,
-            'students_count': students_count,
-            'active_count': active_count,
-            'retention_rate': round(retention_rate, 2),
-            'total_accesses': total_accesses,
-            'avg_accesses': round(avg_accesses_per_student, 2),
-            'total_courses': total_courses,
-            'avg_courses': round(avg_courses_per_student, 2),
-            'cohort_value': round(cohort_value, 2),
-            'value_rating': '🟢 Alto' if cohort_value > 100 else '🟡 Medio' if cohort_value > 50 else '🔴 Bajo'
-        })
+        for cluster_id in range(n_clusters):
+            cluster_members = [
+                students_info[i] for i in range(len(labels)) if labels[i] == cluster_id
+            ]
 
-    # Mejor y peor cohorte
-    if cohort_stats:
-        cohort_stats.sort(key=lambda x: x['cohort_value'], reverse=True)
-        best_cohort = cohort_stats[0]
-        worst_cohort = cohort_stats[-1]
-    else:
-        best_cohort = None
-        worst_cohort = None
+            if cluster_members:
+                avg_accesses_30 = sum(s['accesses_30'] for s in cluster_members) / len(cluster_members)
+                avg_consistency = sum(s['consistency'] for s in cluster_members) / len(cluster_members)
+                avg_unique_courses = sum(s['unique_courses'] for s in cluster_members) / len(cluster_members)
+
+                clusters_result.append({
+                    'id': cluster_id + 1,
+                    'profile': profile_names[cluster_id] if cluster_id < len(profile_names) else f'Grupo {cluster_id + 1}',
+                    'size': len(cluster_members),
+                    'avg_accesses_30': round(avg_accesses_30, 2),
+                    'avg_consistency': round(avg_consistency, 2),
+                    'avg_unique_courses': round(avg_unique_courses, 2),
+                    'members': cluster_members[:10],
+                })
 
     context = {
-        'cohorts': cohort_stats,
-        'total_cohorts': len(cohort_stats),
-        'best_cohort': best_cohort,
-        'worst_cohort': worst_cohort,
+        'clusters': clusters_result,
+        'total_students': len(students_data),
+        'features_analyzed': 6,
     }
-    return render(request, 'analytics/cohort_value.html', context)
+    return render(request, 'analytics/smart_segmentation.html', context)
+
+
+@login_required
+def anomaly_detection(request):
+    """Detección de anomalías con Isolation Forest"""
+    from sklearn.ensemble import IsolationForest
+    from sklearn.preprocessing import StandardScaler
+    import numpy as np
+
+    # Recopilar datos para detección de anomalías
+    courses_data = []
+    courses_info = []
+
+    for course in Course.objects.filter(visible=True)[:50]:
+        # Métricas del curso
+        total_enrolled = UserEnrolment.objects.filter(enrol__course=course).count()
+        total_accesses = UserLastAccess.objects.filter(course=course).count()
+        unique_accessors = UserLastAccess.objects.filter(course=course).values('user').distinct().count()
+        groups_count = Group.objects.filter(course=course).count()
+
+        # Tasa de actividad reciente vs histórica
+        recent = UserLastAccess.objects.filter(
+            course=course,
+            timeaccess__gte=timezone.now() - timedelta(days=7)
+        ).count()
+
+        old = UserLastAccess.objects.filter(
+            course=course,
+            timeaccess__lt=timezone.now() - timedelta(days=7)
+        ).count()
+
+        activity_ratio = (recent / old) if old > 0 else 0
+        engagement_rate = (unique_accessors / total_enrolled * 100) if total_enrolled > 0 else 0
+        accesses_per_student = total_accesses / total_enrolled if total_enrolled > 0 else 0
+
+        if total_enrolled > 0:
+            courses_data.append([
+                total_enrolled,
+                total_accesses,
+                engagement_rate,
+                accesses_per_student,
+                activity_ratio,
+                groups_count
+            ])
+            courses_info.append({
+                'course': course,
+                'total_enrolled': total_enrolled,
+                'total_accesses': total_accesses,
+                'engagement_rate': round(engagement_rate, 2),
+                'accesses_per_student': round(accesses_per_student, 2),
+                'activity_ratio': round(activity_ratio, 2),
+            })
+
+    anomalies = []
+    if len(courses_data) >= 10:
+        # Normalizar datos
+        scaler = StandardScaler()
+        X = scaler.fit_transform(np.array(courses_data))
+
+        # Isolation Forest
+        iso_forest = IsolationForest(contamination=0.1, random_state=42)
+        predictions = iso_forest.fit_predict(X)
+        scores = iso_forest.score_samples(X)
+
+        # Identificar anomalías
+        for i, pred in enumerate(predictions):
+            if pred == -1:  # Anomalía detectada
+                anomaly_score = abs(scores[i])
+
+                # Determinar tipo de anomalía
+                info = courses_info[i]
+                anomaly_type = []
+
+                if info['engagement_rate'] < 20:
+                    anomaly_type.append('📉 Engagement Crítico')
+                if info['accesses_per_student'] > 100:
+                    anomaly_type.append('📈 Actividad Excesiva')
+                if info['activity_ratio'] < 0.2:
+                    anomaly_type.append('⚠️ Declive Reciente')
+                if info['activity_ratio'] > 5:
+                    anomaly_type.append('🚀 Pico Inusual')
+
+                if not anomaly_type:
+                    anomaly_type.append('🔍 Patrón Atípico')
+
+                anomalies.append({
+                    'course': info['course'],
+                    'anomaly_score': round(anomaly_score, 3),
+                    'anomaly_types': ', '.join(anomaly_type),
+                    'total_enrolled': info['total_enrolled'],
+                    'engagement_rate': info['engagement_rate'],
+                    'accesses_per_student': info['accesses_per_student'],
+                    'activity_ratio': info['activity_ratio'],
+                })
+
+        # Ordenar por score de anomalía
+        anomalies.sort(key=lambda x: x['anomaly_score'], reverse=True)
+
+    context = {
+        'anomalies': anomalies,
+        'total_courses_analyzed': len(courses_data),
+        'anomalies_detected': len(anomalies),
+        'contamination_rate': 10,
+    }
+    return render(request, 'analytics/anomaly_detection.html', context)
 
 
 @login_required
@@ -1346,99 +1466,3 @@ def course_network(request):
 
 
 @login_required
-def career_roi(request):
-    """ROI Educativo por Carrera - Costos vs Beneficios"""
-    from collections import defaultdict
-
-    # Analizar por categoría (carrera)
-    categories = Category.objects.filter(depth=2)  # Nivel de carreras
-
-    career_stats = []
-
-    for category in categories:
-        # Cursos de la carrera
-        courses = Course.objects.filter(category=category, visible=True)
-        courses_count = courses.count()
-
-        if courses_count == 0:
-            continue
-
-        # Estudiantes totales
-        total_students = UserEnrolment.objects.filter(
-            enrol__course__category=category
-        ).values('user').distinct().count()
-
-        # Accesos totales
-        total_accesses = UserLastAccess.objects.filter(
-            course__category=category
-        ).count()
-
-        # Estudiantes activos (últimos 30 días)
-        active_students = UserLastAccess.objects.filter(
-            course__category=category,
-            timeaccess__gte=timezone.now() - timedelta(days=30)
-        ).values('user').distinct().count()
-
-        # Tasa de retención
-        retention_rate = (active_students / total_students * 100) if total_students > 0 else 0
-
-        # Engagement promedio
-        avg_accesses = total_accesses / total_students if total_students > 0 else 0
-
-        # Costo estimado por curso (arbitrario para demo)
-        cost_per_course = 5000  # USD
-        total_cost = courses_count * cost_per_course
-
-        # Beneficio estimado (basado en engagement y retención)
-        # Fórmula: estudiantes * engagement * retención
-        estimated_benefit = total_students * avg_accesses * (retention_rate / 100) * 100
-
-        # ROI = (Beneficio - Costo) / Costo * 100
-        roi = ((estimated_benefit - total_cost) / total_cost * 100) if total_cost > 0 else 0
-
-        # Costo por estudiante
-        cost_per_student = total_cost / total_students if total_students > 0 else 0
-
-        career_stats.append({
-            'career': category.name,
-            'courses_count': courses_count,
-            'total_students': total_students,
-            'active_students': active_students,
-            'retention_rate': round(retention_rate, 2),
-            'total_accesses': total_accesses,
-            'avg_accesses': round(avg_accesses, 2),
-            'total_cost': total_cost,
-            'estimated_benefit': round(estimated_benefit, 2),
-            'roi': round(roi, 2),
-            'cost_per_student': round(cost_per_student, 2),
-            'roi_rating': '🟢 Excelente' if roi > 100 else '🟡 Bueno' if roi > 50 else '🟠 Regular' if roi > 0 else '🔴 Deficitario',
-            'efficiency': 'Alta' if retention_rate > 70 and avg_accesses > 10 else 'Media' if retention_rate > 40 else 'Baja'
-        })
-
-    # Ordenar por ROI
-    career_stats.sort(key=lambda x: x['roi'], reverse=True)
-
-    # Estadísticas globales
-    if career_stats:
-        total_investment = sum(c['total_cost'] for c in career_stats)
-        total_benefit = sum(c['estimated_benefit'] for c in career_stats)
-        global_roi = ((total_benefit - total_investment) / total_investment * 100) if total_investment > 0 else 0
-        best_career = career_stats[0]
-        worst_career = career_stats[-1]
-    else:
-        total_investment = 0
-        total_benefit = 0
-        global_roi = 0
-        best_career = None
-        worst_career = None
-
-    context = {
-        'careers': career_stats,
-        'total_careers': len(career_stats),
-        'total_investment': total_investment,
-        'total_benefit': round(total_benefit, 2),
-        'global_roi': round(global_roi, 2),
-        'best_career': best_career,
-        'worst_career': worst_career,
-    }
-    return render(request, 'analytics/career_roi.html', context)
