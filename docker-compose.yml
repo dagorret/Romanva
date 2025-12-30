@@ -1,27 +1,36 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: msp_postgres
+    environment:
+      POSTGRES_DB: moodle_stats
+      POSTGRES_USER: msp_user
+      POSTGRES_PASSWORD: msp_password_2024
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U msp_user -d moodle_stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   web:
     build: .
-    container_name: moodle_stats_web
-    ports:
-      - "8008:8008"
+    container_name: msp_django
+    command: python manage.py runserver 0.0.0.0:8000
     volumes:
-      # Código fuente (para desarrollo)
-      - ./moodlestats:/code/moodlestats
-      - ./moodledata:/code/moodledata
-      - ./manage.py:/code/manage.py
-      # Datos persistentes en host
-      - ./data:/code/data
-      - ./staticfiles:/code/staticfiles
-    working_dir: /code
+      - .:/app
+    ports:
+      - "8008:8000"
     environment:
-      - DJANGO_SETTINGS_MODULE=moodlestats.settings
-      - DEBUG=True
-      # Configuración de Moodle DB
-      - MOODLE_DB_HOST=172.17.0.1
-      - MOODLE_DB_PORT=3306
-      - MOODLE_DB_NAME=app3ecounrcedu_moodle
-      - MOODLE_DB_USER=app3ecounrcedu_moodle
-      - MOODLE_DB_PASSWORD=Iphone#162024
-      - MOODLE_DB_PREFIX=mdl_
-    command: ["/code/entrypoint.sh"]
-    restart: unless-stopped
+      - DATABASE_URL=postgresql://msp_user:msp_password_2024@db:5432/moodle_stats
+      - DJANGO_DEBUG=True
+      - DJANGO_SECRET_KEY=dev-secret-key-change-in-production
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

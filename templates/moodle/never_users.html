@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Usuarios sin acceso – {{ week_label }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="margin-bottom: 20px;">
+        <a href="{% url 'panel' %}?courseid={{ course.id }}&groupid={{ group.id }}" class="btn">
+            ← Volver al panel
+        </a>
+    </div>
+
+    <h2 style="margin-top: 0;">Usuarios sin acceso</h2>
+    <h3 style="color: #6b7280; font-weight: 400; margin-top: 0;">{{ week_label }}</h3>
+
+    <p><strong>Curso:</strong> {{ course.shortname }} - {{ course.fullname }}</p>
+    <p><strong>Grupo:</strong> {{ group.name }}</p>
+    <p class="muted">Total de usuarios sin acceso: <strong>{{ users.count }}</strong></p>
+
+    {% if users %}
+    <table>
+        <thead>
+            <tr>
+                <th>Apellido</th>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Usuario</th>
+                <th>ID</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.lastname }}</td>
+                <td>{{ user.firstname }}</td>
+                <td>{{ user.email }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.id }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No hay usuarios en esta condición para esa semana.</p>
+    {% endif %}
+</div>
+{% endblock %}

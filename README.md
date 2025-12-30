@@ -1,301 +1,285 @@
-# Moodle Stats - Sistema de Exportación y Análisis de Datos
+# Romanova Platform
 
-Sistema Django para exportar, importar y analizar datos de Moodle con interfaz administrativa.
+Sistema de análisis estadístico y gestión de datos Moodle desarrollado en Django con PostgreSQL.
 
-## 📋 Características
+## Características
 
-- ✅ Exportación de datos desde Moodle MySQL a archivos NDJSON
-- ✅ Importación de datos a Django para análisis
-- ✅ Interfaz administrativa completa
-- ✅ Exportación individual a Excel por tabla
-- ✅ Datos persistentes en volúmenes Docker
-- ✅ 94,767+ registros de 10 tablas de Moodle
+### 📊 Panel de Reportes Básicos
+- Migración completa del sistema PHP original
+- Reportes semanales de acceso por curso y grupo
+- Filtrado por categoría "Grado" y cursos del último año
+- Búsqueda por código de curso
+- Lista detallada de usuarios sin acceso
 
-## 🗂️ Tablas Soportadas
+### 📈 Análisis Estadísticos Avanzados
+1. **Estadísticas Descriptivas**: Media, máximos, mínimos, tasas de acceso
+2. **Análisis de Correlación**: Relación entre variables (inscriptos, accesos, grupos)
+3. **Distribución de Accesos**: Histogramas y distribución temporal
+4. **Comparación entre Grupos**: Métricas comparativas de rendimiento
+5. **Tendencias Temporales**: Análisis de series de tiempo semanales
+6. **Panel Personalizado**: Selección libre de variables y operaciones estadísticas
 
-1. **courses** - Cursos (306 registros)
-2. **categories** - Categorías (21 registros)
-3. **enrol** - Métodos de inscripción (830 registros)
-4. **user_enrolments** - Inscripciones de usuarios (17,384 registros)
-5. **users** - Usuarios (4,479 registros)
-6. **groups** - Grupos (615 registros)
-7. **groups_members** - Miembros de grupos (18,041 registros)
-8. **user_lastaccess** - Últimos accesos (16,095 registros)
-9. **role_assignments** - Asignaciones de roles (17,521 registros)
-10. **context** - Contextos (19,475 registros)
+### 🐳 Arquitectura
+- **Backend**: Django 5.1 con Python 3.12
+- **Base de datos**: PostgreSQL 16
+- **Containerización**: Docker y Docker Compose
+- **Librerías estadísticas**: NumPy, Pandas, SciPy, Matplotlib, Seaborn
 
-## 🚀 Instalación y Configuración
+## Instalación y Configuración
 
-### Requisitos Previos
+### Requisitos previos
+- Docker
+- Docker Compose
 
-- Docker y Docker Compose
-- Acceso a la base de datos de Moodle (MySQL/MariaDB)
-- Puerto 8008 disponible
-
-### Configuración Inicial
-
-1. **Clonar/Descargar el proyecto**
-```bash
-cd ~/work/msp
-```
-
-2. **Configurar variables de entorno**
-
-Editar `docker-compose.yml`:
-```yaml
-environment:
-  - MOODLE_DB_HOST=172.17.0.1  # IP del gateway Docker
-  - MOODLE_DB_PORT=3306
-  - MOODLE_DB_NAME=app3ecounrcedu_moodle
-  - MOODLE_DB_USER=app3ecounrcedu_moodle
-  - MOODLE_DB_PASSWORD=Iphone#162024
-  - MOODLE_DB_PREFIX=mdl_
-```
-
-3. **Configurar permisos de MariaDB**
+### 1. Clonar y configurar
 
 ```bash
-# Editar configuración de MariaDB
-sudo nano /etc/mysql/mariadb.conf.d/50-server.cnf
-
-# Cambiar:
-bind-address = 0.0.0.0
-
-# Reiniciar MariaDB
-sudo systemctl restart mariadb
-
-# Dar permisos al usuario
-mysql -u root -p
+cd /home/carlos/work/msp
+cp .env.example .env
 ```
 
-```sql
-GRANT ALL PRIVILEGES ON app3ecounrcedu_moodle.* TO 'app3ecounrcedu_moodle'@'172.17.%' IDENTIFIED BY 'Iphone#162024';
-FLUSH PRIVILEGES;
-EXIT;
-```
+Edita `.env` si necesitas cambiar configuraciones (opcional para desarrollo).
 
-4. **Iniciar el contenedor**
+### 2. Construir y levantar servicios
 
 ```bash
-docker compose up -d
+docker compose up --build -d
 ```
 
-5. **Crear superusuario**
+Esto iniciará:
+- PostgreSQL en puerto 5432
+- Django en puerto 8008
+
+### 3. Ejecutar migraciones
 
 ```bash
-docker exec -it moodle_stats_web python manage.py createsuperuser
+docker compose exec web python manage.py makemigrations
+docker compose exec web python manage.py migrate
 ```
 
-## 📊 Uso del Sistema
-
-### Acceso al Admin
-
-```
-http://v.eco.unrc.edu.ar:8008/admin/
-```
-
-### Comandos Principales
-
-#### Exportar datos desde Moodle
+### 4. Crear superusuario
 
 ```bash
-# Exportar todas las tablas
-docker exec -it moodle_stats_web python manage.py export_moodle --tables all
-
-# Exportar tablas específicas
-docker exec -it moodle_stats_web python manage.py export_moodle --tables courses,users
+docker compose exec web python manage.py createsuperuser
 ```
 
-Los archivos NDJSON se guardan en: `~/work/msp/data/exports/*.ndjson`
+Credenciales sugeridas:
+- Usuario: `admin`
+- Email: `admin@localhost`
+- Contraseña: `admin123` (cambiar en producción)
 
-#### Importar datos a Django
+### 5. Cargar datos de prueba (mock)
 
 ```bash
-# Importar todas las tablas (limpiando datos previos)
-docker exec -it moodle_stats_web python manage.py import_moodle --tables all --clear
-
-# Importar sin limpiar (agregar datos)
-docker exec -it moodle_stats_web python manage.py import_moodle --tables all
-
-# Importar tablas específicas
-docker exec -it moodle_stats_web python manage.py import_moodle --tables courses,users --clear
+docker compose exec web python manage.py load_mock_data --clear
 ```
 
-### Exportar a Excel desde el Admin
+Esto generará:
+- 5 categorías (Grado, Postgrado, Derecho, Economía, Ingeniería)
+- 9 cursos con datos del año actual
+- 60 usuarios de prueba
+- Grupos por curso (2-3 por curso)
+- Inscripciones y accesos realistas
 
-1. Acceder a cualquier tabla en el admin
-2. Seleccionar los registros que deseas exportar
-3. En el menú "Acción", elegir **📊 Exportar a Excel**
-4. Click en "Ir"
-5. Se descargará un archivo Excel con los datos seleccionados
+## Uso del Sistema
 
-## 📁 Estructura de Archivos
+### Acceso al sistema
+
+1. **Aplicación web**: http://localhost:8008
+2. **Panel de administración**: http://localhost:8008/admin
+
+### Credenciales por defecto
+- Usuario: `admin`
+- Contraseña: `admin123`
+
+### Navegación
+
+#### Panel de Reportes (migrado de PHP)
+1. Ingresa al sistema
+2. Selecciona un curso
+3. Selecciona un grupo
+4. Define rango de fechas (por defecto: últimos 30 días)
+5. Haz clic en "Calcular"
+6. Visualiza reportes semanales de acceso
+7. Haz clic en "Ver usuarios" para ver quiénes no accedieron
+
+#### Estadísticas Avanzadas
+1. Haz clic en "Estadísticas" en el menú
+2. Selecciona el tipo de análisis:
+   - **Estadísticas Descriptivas**: Resumen general por curso
+   - **Correlación**: Relaciones entre variables
+   - **Distribución**: Accesos por día
+   - **Comparación**: Rendimiento entre grupos
+   - **Tendencias**: Evolución semanal
+   - **Panel Personalizado**: Análisis a medida
+
+#### Panel Personalizado
+1. Selecciona variables a analizar (accesos, inscripciones, etc.)
+2. Elige operación estadística (media, mediana, desviación estándar, etc.)
+3. Haz clic en "Calcular estadísticas"
+4. Visualiza resultados
+
+## Comandos Útiles
+
+### Ver logs
+```bash
+docker compose logs -f web
+```
+
+### Acceder a shell de Django
+```bash
+docker compose exec web python manage.py shell
+```
+
+### Acceder a PostgreSQL
+```bash
+docker compose exec db psql -U msp_user -d moodle_stats
+```
+
+### Recargar datos mock
+```bash
+docker compose exec web python manage.py load_mock_data --clear
+```
+
+### Detener servicios
+```bash
+docker compose down
+```
+
+### Detener y eliminar volúmenes (CUIDADO: elimina la BD)
+```bash
+docker compose down -v
+```
+
+## Estructura del Proyecto
 
 ```
-~/work/msp/
-├── data/                          # Datos persistentes
-│   ├── db.sqlite3                # Base de datos Django
-│   ├── exports/                  # Archivos NDJSON exportados
-│   │   ├── courses.ndjson
-│   │   ├── users.ndjson
-│   │   └── ...
-│   └── django.log               # Logs de la aplicación
-├── moodledata/                   # App Django
-│   ├── admin.py                 # Configuración del admin
-│   ├── models.py                # Modelos de datos
-│   └── management/commands/     # Comandos personalizados
-│       ├── export_moodle.py
-│       └── import_moodle.py
-├── moodlestats/                 # Configuración Django
+msp/
+├── config/              # Configuración Django
 │   ├── settings.py
 │   └── urls.py
-├── templates/                   # Templates HTML
-├── docker-compose.yml           # Configuración Docker
-├── Dockerfile
-└── requirements.txt
-
+├── apps/
+│   ├── moodle/         # App principal (reportes básicos)
+│   │   ├── models.py   # Modelos de datos Moodle
+│   │   ├── views.py    # Vistas del panel
+│   │   ├── admin.py    # Admin de Django
+│   │   └── management/
+│   │       └── commands/
+│   │           └── load_mock_data.py  # Generador de datos
+│   └── analytics/      # App de estadísticas avanzadas
+│       ├── models.py
+│       ├── views.py    # 6 tipos de análisis
+│       └── admin.py
+├── templates/
+│   ├── base.html
+│   ├── moodle/         # Templates del panel básico
+│   └── analytics/      # Templates de estadísticas
+├── static/             # CSS, JS, imágenes
+├── docker compose.yml  # Orquestación de servicios
+├── Dockerfile          # Imagen de Django
+├── requirements.txt    # Dependencias Python
+└── manage.py
 ```
 
-## 🔧 Mantenimiento
+## Modelos de Datos
 
-### Ver logs del contenedor
+El sistema replica la estructura de Moodle:
 
-```bash
-docker logs -f moodle_stats_web
-```
+- **Category**: Categorías de cursos
+- **Course**: Cursos con código, nombre, fechas
+- **MoodleUser**: Usuarios (estudiantes, docentes)
+- **Group**: Grupos dentro de cursos
+- **GroupMember**: Relación usuario-grupo
+- **Enrol**: Métodos de inscripción
+- **UserEnrolment**: Inscripciones de usuarios
+- **UserLastAccess**: Último acceso al curso
 
-### Reiniciar el servicio
+## Migración desde el sistema PHP
 
-```bash
-docker compose restart
-```
+El sistema Django implementa la misma funcionalidad que el script PHP original:
 
-### Detener el servicio
+### Equivalencias
 
-```bash
-docker compose down
-```
+| PHP Original | Django |
+|-------------|--------|
+| `gestoresapp/index.php` | `apps/moodle/views.py::login_view` |
+| `gestoresapp/panel.php` | `apps/moodle/views.py::panel_view` |
+| `gestoresapp/never_users.php` | `apps/moodle/views.py::never_users_view` |
+| Archivos NDJSON | Modelos Django + PostgreSQL |
+| `lib_ndjson.php` | ORM de Django |
 
-### Backup de datos
+### Mejoras sobre el original
 
-```bash
-# Backup de la base de datos Django
-cp data/db.sqlite3 data/db.sqlite3.backup
+1. ✅ Base de datos relacional en vez de archivos NDJSON
+2. ✅ Autenticación integrada con Django
+3. ✅ Panel de administración completo
+4. ✅ Módulo de estadísticas avanzadas
+5. ✅ Containerización con Docker
+6. ✅ API REST-ready (fácil de extender)
+7. ✅ Tests automatizables
 
-# Backup de archivos NDJSON
-tar -czf exports-backup-$(date +%Y%m%d).tar.gz data/exports/
-```
+## Estadísticas Disponibles
 
-### Restaurar datos
+### Descriptivas
+- Media (promedio)
+- Mediana
+- Máximo y mínimo
+- Desviación estándar
+- Tasas de acceso
 
-```bash
-# Restaurar base de datos
-cp data/db.sqlite3.backup data/db.sqlite3
+### Correlativas
+- Inscriptos vs Accesos
+- Grupos vs Rendimiento
+- Variables personalizadas
 
-# Restaurar exports
-tar -xzf exports-backup-YYYYMMDD.tar.gz
-```
+### Temporales
+- Distribución diaria
+- Tendencias semanales
+- Evolución histórica
 
-## 📈 Flujo de Trabajo Típico
+## Desarrollo
 
-1. **Exportar datos actualizados desde Moodle:**
-   ```bash
-   docker exec -it moodle_stats_web python manage.py export_moodle --tables all
-   ```
+### Agregar nuevos análisis estadísticos
 
-2. **Importar a Django (actualizar):**
-   ```bash
-   docker exec -it moodle_stats_web python manage.py import_moodle --tables all --clear
-   ```
+1. Edita `apps/analytics/views.py`
+2. Agrega nueva función de vista
+3. Crea template en `templates/analytics/`
+4. Registra URL en `apps/analytics/urls.py`
+5. Agrega al menú en `analytics_menu()`
 
-3. **Analizar en el Admin:**
-   - Filtrar por categorías, fechas, estados
-   - Buscar usuarios, cursos específicos
-   - Generar reportes
+### Extender modelos
 
-4. **Exportar resultados a Excel:**
-   - Seleccionar registros
-   - Usar acción "Exportar a Excel"
+1. Edita `apps/moodle/models.py`
+2. Crea migración: `python manage.py makemigrations`
+3. Aplica: `python manage.py migrate`
+4. Actualiza `load_mock_data.py` para generar datos
 
-## 🗄️ Persistencia de Datos
+## Producción
 
-Todos los datos son persistentes en volúmenes Docker:
+Para deployment en producción:
 
-- **Base de datos Django:** `~/work/msp/data/db.sqlite3`
-- **Archivos NDJSON:** `~/work/msp/data/exports/`
-- **Logs:** `~/work/msp/data/django.log`
+1. Cambia `DJANGO_DEBUG=False` en `.env`
+2. Genera SECRET_KEY segura
+3. Configura ALLOWED_HOSTS
+4. Usa servidor WSGI (Gunicorn/uWSGI)
+5. Configura nginx como reverse proxy
+6. Habilita HTTPS
+7. Configura backups de PostgreSQL
 
-Los datos **NO se pierden** al reiniciar el contenedor.
+## Soporte y Contribuciones
 
-## 🔒 Configuración de Red
+Este proyecto migra el sistema PHP original a Django con mejoras significativas en arquitectura, escalabilidad y funcionalidades estadísticas.
 
-El contenedor accede a Moodle MySQL usando:
-- **IP Gateway Docker:** `172.17.0.1`
-- Esta IP es fija mientras uses Docker en este servidor
-- Permite que el contenedor acceda a servicios del host
+### Autor
+Sistema desarrollado por Claude Code basado en el script PHP original de gestoresapp.
 
-## ⚙️ Variables de Entorno Importantes
+### Licencia
+[Especificar licencia]
 
-| Variable | Descripción | Valor Default |
-|----------|-------------|---------------|
-| `MOODLE_DB_HOST` | Host de MySQL Moodle | `172.17.0.1` |
-| `MOODLE_DB_PORT` | Puerto de MySQL | `3306` |
-| `MOODLE_DB_NAME` | Nombre BD Moodle | - |
-| `MOODLE_DB_USER` | Usuario MySQL | - |
-| `MOODLE_DB_PASSWORD` | Contraseña MySQL | - |
-| `MOODLE_DB_PREFIX` | Prefijo tablas | `mdl_` |
-| `DEBUG` | Modo debug Django | `True` |
+---
 
-## 🐛 Troubleshooting
-
-### Error: "Can't connect to MySQL server"
-
-**Solución:**
-1. Verificar que MariaDB esté escuchando en `0.0.0.0`
-2. Verificar permisos del usuario desde `172.17.%`
-3. Verificar firewall del servidor
-
-### Error: "No such table: moodledata_course"
-
-**Solución:**
-```bash
-docker exec -it moodle_stats_web python manage.py migrate
-```
-
-### El contenedor no inicia
-
-**Solución:**
-```bash
-docker logs moodle_stats_web  # Ver el error
-docker compose down
-docker compose up -d --build  # Reconstruir
-```
-
-## 📝 Notas Importantes
-
-- Los timestamps en Moodle son **Unix timestamps** (segundos desde 1970)
-- Los archivos NDJSON usan **UTF-8** encoding
-- La importación usa `bulk_create` con `ignore_conflicts=True` (evita duplicados)
-- La exportación a Excel tiene límite de **50 caracteres** por celda en ancho de columna
-
-## 🚀 Próximas Mejoras
-
-- [ ] Gráficos y estadísticas en el admin
-- [ ] Reportes personalizados
-- [ ] Sincronización automática (cron)
-- [ ] API REST para consultas
-- [ ] Dashboard con métricas
-
-## 📧 Soporte
-
-Para problemas o consultas, revisar los logs:
-
-```bash
-docker logs -f moodle_stats_web
-tail -f data/django.log
-```
-
-## 📜 Licencia
-
-Proyecto interno - Universidad Nacional de Río Cuarto
-# msp
+**Notas importantes:**
+- Los datos mock son para testing/desarrollo
+- En producción, conectar a BD real de Moodle o implementar sincronización
+- El sistema es extensible: fácil agregar nuevos tipos de análisis
+- Compatible con Django REST Framework para crear API

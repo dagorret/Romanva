@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Análisis de Correlación{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="margin-bottom: 20px;">
+        <a href="{% url 'analytics_menu' %}" class="btn">← Volver al menú</a>
+    </div>
+
+    <h2 style="margin-top: 0;">🔗 Análisis de Correlación</h2>
+    <p class="muted">Relación entre inscriptos, accesos y grupos por curso</p>
+
+    {% if data_points %}
+    <table>
+        <thead>
+            <tr>
+                <th>Curso</th>
+                <th>Inscriptos</th>
+                <th>Accesos</th>
+                <th>Grupos</th>
+                <th>Tasa de acceso</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for point in data_points %}
+            <tr>
+                <td>{{ point.course_name }}</td>
+                <td>{{ point.enrolled }}</td>
+                <td>{{ point.accesses }}</td>
+                <td>{{ point.groups }}</td>
+                <td>{{ point.access_rate }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 12px;">
+        <h3 style="margin-top: 0;">Interpretación</h3>
+        <ul style="line-height: 1.8;">
+            <li>Cursos con más inscriptos tienden a tener más accesos totales</li>
+            <li>La tasa de acceso (%) muestra qué proporción de inscriptos realmente accede</li>
+            <li>Cantidad de grupos puede influir en la organización y seguimiento</li>
+        </ul>
+        <p class="muted">Para análisis correlacional avanzado, considera usar herramientas como coeficiente de Pearson o Spearman.</p>
+    </div>
+    {% else %}
+    <p class="muted">No hay datos suficientes para el análisis de correlación.</p>
+    {% endif %}
+</div>
+{% endblock %}

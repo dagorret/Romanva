@@ -1,29 +1,30 @@
 FROM python:3.12-slim
 
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
 # Instalar dependencias del sistema
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-       ca-certificates \
-       curl \
-       build-essential \
-       default-libmysqlclient-dev \
-       pkg-config \
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    libpq-dev \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /code
+# Copiar archivos de requirements
+COPY requirements.txt .
 
 # Instalar dependencias Python
-COPY requirements.txt /code/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar código
-COPY . /code/
+# Copiar código de la aplicación
+COPY . .
 
-# Crear directorios necesarios
-RUN mkdir -p /code/data /code/staticfiles
+# Crear usuario no-root
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
 
-EXPOSE 8008
+EXPOSE 8000
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:8008/ || exit 1
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

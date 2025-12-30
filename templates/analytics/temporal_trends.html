@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Tendencias Temporales{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="margin-bottom: 20px;">
+        <a href="{% url 'analytics_menu' %}" class="btn">← Volver al menú</a>
+    </div>
+
+    <h2 style="margin-top: 0;">📉 Tendencias Temporales</h2>
+    <p class="muted">Evolución de accesos por semana (últimas 12 semanas)</p>
+
+    {% if weekly_data %}
+    <table>
+        <thead>
+            <tr>
+                <th>Período</th>
+                <th>Fecha inicio</th>
+                <th>Accesos</th>
+                <th>Tendencia</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for week in weekly_data %}
+            <tr>
+                <td><strong>{{ week.week }}</strong></td>
+                <td>{{ week.date }}</td>
+                <td>{{ week.count }}</td>
+                <td>
+                    <div style="background: #6366f1; height: 24px; width: {{ week.count|add:0 }}px; max-width: 300px; border-radius: 4px;"></div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="margin-top: 30px; padding: 20px; background: #f0fdf4; border-radius: 12px;">
+        <h3 style="margin-top: 0; color: #15803d;">Análisis de Tendencias</h3>
+        <ul style="line-height: 1.8;">
+            <li>Identifica patrones semanales de uso de la plataforma</li>
+            <li>Detecta tendencias crecientes o decrecientes a lo largo del tiempo</li>
+            <li>Permite anticipar períodos de mayor o menor actividad</li>
+            <li>Útil para planificación de recursos y soporte técnico</li>
+        </ul>
+    </div>
+    {% else %}
+    <p class="muted">No hay suficientes datos para mostrar tendencias.</p>
+    {% endif %}
+</div>
+{% endblock %}

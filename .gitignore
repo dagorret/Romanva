@@ -25,33 +25,26 @@ wheels/
 
 # Django
 *.log
-local_settings.py
 db.sqlite3
 db.sqlite3-journal
-/staticfiles/
-/media/
+/media
+/staticfiles
+/static
 
-# Datos persistentes (comentar si quieres versionar)
-/data/
-/staticfiles/
+# Environment
+.env
+.venv
 
-# IDEs
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+
+# OS
 .DS_Store
+Thumbs.db
 
-# Configuración sensible
-config.json
-.env
-*.pem
-*.key
-
-# Docker
-.dockerignore
-
-# Backups
-*.bak
-*.backup
+# Database
+postgres_data/

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Panel de Reportes – Romanova{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="margin-top: 0;">Panel de Reportes de Acceso</h2>
+
+    {% if errors %}
+    <div class="error">
+        {% for error in errors %}
+            {{ error }}{% if not forloop.last %} · {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="get">
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 18px;">
+            <div>
+                <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 6px;">
+                    Curso
+                </label>
+                <input type="text" name="q" placeholder="Buscar por código"
+                       value="{{ course_search }}" autocomplete="off"
+                       style="width: 100%; padding: 8px 11px; border: 1px solid #d0d4dc; border-radius: 10px; margin-bottom: 6px;">
+                <select name="courseid" onchange="this.form.submit()"
+                        style="width: 100%; padding: 9px 11px; border: 1px solid #d0d4dc; border-radius: 10px;">
+                    <option value="">-- Elegir curso --</option>
+                    {% for course in courses %}
+                        <option value="{{ course.id }}" {% if course.id == selected_course.id %}selected{% endif %}>
+                            {{ course.shortname }} - {{ course.fullname }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 6px;">
+                    Grupo
+                </label>
+                <select name="groupid" {% if not selected_course %}disabled{% endif %}
+                        style="width: 100%; padding: 9px 11px; border: 1px solid #d0d4dc; border-radius: 10px; margin-top: 36px;">
+                    <option value="">-- Elegir grupo --</option>
+                    {% for group in groups %}
+                        <option value="{{ group.id }}" {% if group.id == selected_group.id %}selected{% endif %}>
+                            {{ group.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 6px;">
+                    Desde
+                </label>
+                <input type="date" name="from" value="{{ from_str }}"
+                       style="width: 100%; padding: 9px 11px; border: 1px solid #d0d4dc; border-radius: 10px; margin-top: 36px;">
+            </div>
+
+            <div>
+                <label style="font-weight: 600; font-size: 14px; display: block; margin-bottom: 6px;">
+                    Hasta
+                </label>
+                <input type="date" name="to" value="{{ to_str }}"
+                       style="width: 100%; padding: 9px 11px; border: 1px solid #d0d4dc; border-radius: 10px; margin-top: 36px;">
+            </div>
+        </div>
+
+        <div style="margin-top: 14px;">
+            <button type="submit" class="btn btn-success">Calcular</button>
+        </div>
+    </form>
+
+    {% if report %}
+    <h3 style="margin-top: 24px;">Usuarios que aún no ingresaron (por semana)</h3>
+    <p class="muted">Total integrantes del grupo: <strong>{{ report.total_group }}</strong></p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Semana</th>
+                <th>Aún no ingresaron</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in report.series %}
+            <tr>
+                <td>{{ row.week }}</td>
+                <td>{{ row.never }}</td>
+                <td>
+                    <a href="{% url 'never_users' %}?courseid={{ selected_course.id }}&groupid={{ selected_group.id }}&end={{ row.end_ts }}"
+                       class="btn btn-sm" style="background: #0ea5e9;">
+                        Ver usuarios
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <p class="muted" style="margin-top: 12px;">
+        Se usa el registro de último acceso del curso. Sin registro se considera "nunca ingresó".
+    </p>
+
+    {% elif selected_course and selected_group %}
+    <p class="muted" style="margin-top: 18px;">
+        Elegí un rango de fechas y presioná <strong>Calcular</strong>.
+    </p>
+    {% endif %}
+</div>
+{% endblock %}

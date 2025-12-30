@@ -1,31 +1,30 @@
 #!/bin/bash
 set -e
 
-cd /code
+echo "Esperando a que PostgreSQL esté listo..."
+while ! pg_isready -h db -p 5432 -U msp_user > /dev/null 2>&1; do
+    sleep 1
+done
 
-echo "🔄 Ejecutando migraciones..."
-python manage.py migrate --noinput
+echo "PostgreSQL está listo!"
 
-echo "📦 Recolectando archivos estáticos..."
-python manage.py collectstatic --noinput --clear
+echo "Ejecutando migraciones..."
+python manage.py makemigrations
+python manage.py migrate
 
-echo "👤 Creando usuario admin..."
-python manage.py shell << 'EOF'
+echo "Creando superusuario si no existe..."
+python manage.py shell << END
 from django.contrib.auth import get_user_model
 User = get_user_model()
-u, created = User.objects.get_or_create(
-    username="admin",
-    defaults={"email": "admin@admin.com", "is_staff": True, "is_superuser": True},
-)
-u.set_password("admin")
-u.save()
-if created:
-    print("✓ Usuario admin creado")
+if not User.objects.filter(username='admin').exists():
+    User.objects.create_superuser('admin', 'admin@localhost', 'admin123')
+    print('Superusuario creado: admin / admin123')
 else:
-    print("✓ Usuario admin actualizado")
-EOF
+    print('Superusuario ya existe')
+END
 
-echo "🚀 Iniciando servidor Django..."
-echo "📍 Admin disponible en: http://localhost:8008/admin/"
-echo "👤 Usuario: admin / Contraseña: admin"
-python manage.py runserver 0.0.0.0:8008
+echo "Recolectando archivos estáticos..."
+python manage.py collectstatic --noinput || true
+
+echo "Sistema listo!"
+exec "$@"

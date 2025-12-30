@@ -1,320 +1,353 @@
-# API del Admin de Moodle Stats
+# Admin y API - Romanova Platform
 
-Este documento describe las funcionalidades disponibles en el admin de Django.
+## Panel de Administración de Django
 
-## Tablas Disponibles
+El sistema incluye el panel de administración completo de Django con todos los modelos registrados.
 
-### 1. Logs de Importación
-**URL:** `/admin/moodledata/importlog/`
+### Acceso al Admin
 
-Muestra el historial de todas las importaciones realizadas:
-- Tabla importada
-- Fecha/hora de inicio y fin
-- Estado (En progreso, Completada, Fallida)
-- Número de registros importados
-- Mensajes de error (si los hay)
+**URL**: http://localhost:8008/admin
 
-**Permisos:** Solo lectura
+**Credenciales por defecto**:
+- Usuario: `admin`
+- Contraseña: `admin123`
 
-### 2. Cursos
-**URL:** `/admin/moodledata/course/`
+### Modelos Disponibles en Admin
 
-Gestión de cursos de Moodle.
+#### App: Moodle (Datos de Moodle)
 
-**Campos:**
-- ID Moodle
-- Nombre corto
-- Nombre completo
-- Categoría
-- Fecha inicio/fin (timestamp)
-- Visible
+1. **Categorías** (`Category`)
+   - Campos: name, path, parent, depth
+   - Búsqueda por: name, path
+   - Filtros: depth
 
-**Acciones disponibles:**
-- Importar desde Moodle
-- Exportar a Excel
-- Filtrar por visibilidad y categoría
-- Buscar por nombre
+2. **Cursos** (`Course`)
+   - Campos: shortname, fullname, category, startdate, enddate, visible
+   - Búsqueda por: shortname, fullname
+   - Filtros: category, visible, startdate
+   - Jerarquía temporal: startdate
 
-### 3. Categorías
-**URL:** `/admin/moodledata/category/`
+3. **Usuarios de Moodle** (`MoodleUser`)
+   - Campos: username, firstname, lastname, email
+   - Búsqueda por: username, firstname, lastname, email
+   - Orden: lastname, firstname
 
-Gestión de categorías de cursos.
+4. **Grupos** (`Group`)
+   - Campos: name, course, description
+   - Búsqueda por: name, course__shortname, course__fullname
+   - Filtros: course
 
-**Campos:**
-- ID Moodle
-- Nombre
-- Categoría padre
-- Ruta
-- Visible
+5. **Miembros de Grupos** (`GroupMember`)
+   - Campos: group, user, timeadded
+   - Búsqueda por: user__username, user__lastname, group__name
+   - Filtros: group__course, timeadded
+   - Jerarquía temporal: timeadded
 
-**Acciones disponibles:**
-- Importar desde Moodle
-- Exportar a Excel
-- Filtrar por visibilidad
-- Buscar por nombre
+6. **Métodos de Inscripción** (`Enrol`)
+   - Campos: course, enrol, status
+   - Búsqueda por: course__shortname, course__fullname
+   - Filtros: enrol, status
 
-### 4. Métodos de Inscripción
-**URL:** `/admin/moodledata/enrol/`
+7. **Inscripciones de Usuarios** (`UserEnrolment`)
+   - Campos: enrol, user, timestart, timeend, timecreated
+   - Búsqueda por: user__username, user__lastname, enrol__course__shortname
+   - Filtros: enrol__course, timestart
+   - Jerarquía temporal: timecreated
 
-Gestión de métodos de inscripción en cursos.
+8. **Últimos Accesos** (`UserLastAccess`)
+   - Campos: user, course, timeaccess
+   - Búsqueda por: user__username, user__lastname, course__shortname
+   - Filtros: course, timeaccess
+   - Jerarquía temporal: timeaccess
+   - Índices optimizados para consultas rápidas
 
-**Campos:**
-- ID Moodle
-- ID Curso
-- Método (manual, self, etc.)
-- Estado
+#### App: Analytics (Análisis Estadísticos)
 
-**Acciones disponibles:**
-- Importar desde Moodle
-- Exportar a Excel
-- Filtrar por método y estado
-- Buscar por ID de curso
+1. **Análisis Guardados** (`SavedAnalysis`)
+   - Campos: name, description, analysis_type, parameters, created_at, updated_at
+   - Búsqueda por: name, description
+   - Filtros: analysis_type, created_at
+   - Jerarquía temporal: created_at
 
-### 5. Inscripciones de Usuarios
-**URL:** `/admin/moodledata/userenrolment/`
+### Operaciones Comunes en Admin
 
-Gestión de inscripciones de usuarios en cursos.
+#### Crear Curso Nuevo
+1. Admin → Cursos → Añadir curso
+2. Completar: shortname, fullname, category
+3. Opcional: startdate, enddate
+4. Guardar
 
-**Campos:**
-- ID Moodle
-- ID Usuario
-- ID Inscripción
-- Tiempo inicio/fin (timestamp)
-- Estado
+#### Agregar Usuario a Grupo
+1. Admin → Miembros de grupos → Añadir miembro de grupo
+2. Seleccionar grupo
+3. Seleccionar usuario
+4. Guardar
 
-**Acciones disponibles:**
-- Importar desde Moodle
-- Exportar a Excel
-- Filtrar por estado
-- Buscar por ID de usuario o inscripción
+#### Ver Accesos de un Usuario
+1. Admin → Últimos accesos al curso
+2. Buscar por username o apellido
+3. Ver lista de accesos por curso
 
-### 6. Usuarios
-**URL:** `/admin/moodledata/user/`
+#### Filtrar Cursos por Categoría
+1. Admin → Cursos
+2. Panel derecho → Filtros → Seleccionar categoría
+3. Ver cursos filtrados
 
-Gestión de usuarios de Moodle.
+## API REST (Preparado para implementación)
 
-**Campos:**
-- ID Moodle
-- Nombre de usuario
-- Nombre
-- Apellido
-- Email
-- Ciudad
-- País
-- Suspendido
-- Eliminado
+El sistema está listo para agregar Django REST Framework.
 
-**Acciones disponibles:**
-- Importar desde Moodle
-- Exportar a Excel
-- Filtrar por suspendido y país
-- Buscar por nombre de usuario, nombre, apellido o email
-
-### 7. Grupos
-**URL:** `/admin/moodledata/group/`
-
-Gestión de grupos de cursos.
-
-**Campos:**
-- ID Moodle
-- ID Curso
-- Nombre
-- Número ID
-
-**Acciones disponibles:**
-- Importar desde Moodle
-- Exportar a Excel
-- Buscar por nombre o número ID
-
-### 8. Miembros de Grupos
-**URL:** `/admin/moodledata/groupmember/`
-
-Gestión de miembros de grupos.
-
-**Campos:**
-- ID Moodle
-- ID Grupo
-- ID Usuario
-
-**Acciones disponibles:**
-- Importar desde Moodle
-- Exportar a Excel
-- Buscar por ID de grupo o usuario
-
-### 9. Último Acceso de Usuarios
-**URL:** `/admin/moodledata/userlastaccess/`
-
-Registro de último acceso de usuarios a cursos.
-
-**Campos:**
-- ID Moodle
-- ID Usuario
-- ID Curso
-- Tiempo de acceso (timestamp)
-
-**Acciones disponibles:**
-- Importar desde Moodle
-- Exportar a Excel
-- Buscar por ID de usuario o curso
-
-### 10. Asignaciones de Roles
-**URL:** `/admin/moodledata/roleassignment/`
-
-Gestión de asignaciones de roles a usuarios.
-
-**Campos:**
-- ID Moodle
-- ID Rol
-- ID Contexto
-- ID Usuario
-- Tiempo modificado (timestamp)
-- ID Modificador
-
-**Acciones disponibles:**
-- Importar desde Moodle
-- Exportar a Excel
-- Buscar por ID de usuario o rol
-
-### 11. Contextos
-**URL:** `/admin/moodledata/context/`
-
-Gestión de contextos de Moodle.
-
-**Campos:**
-- ID Moodle
-- Nivel de contexto
-- ID Instancia
-- Ruta
-- Profundidad
-
-**Acciones disponibles:**
-- Importar desde Moodle
-- Exportar a Excel
-- Filtrar por nivel de contexto
-- Buscar por ID de instancia
-
-## Flujo de Trabajo Típico
-
-### 1. Primera Importación
-
-1. Accede al admin: http://localhost:8008/admin/
-2. Entra a "Usuarios" (o la tabla que quieras importar)
-3. Haz clic en "Importar desde Moodle" (botón verde arriba a la derecha)
-4. Confirma la importación
-5. Espera a que termine (se mostrará un mensaje de éxito)
-6. Repite para otras tablas
-
-### 2. Ver Datos Importados
-
-1. En el admin, entra a cualquier tabla
-2. Verás la lista de registros importados
-3. Usa los filtros y búsqueda para encontrar lo que necesitas
-4. Haz clic en un registro para ver sus detalles
-
-### 3. Exportar a Excel
-
-1. En la lista de registros, selecciona los que quieres exportar (checkboxes)
-2. En el menú desplegable "Acción", selecciona "Exportar seleccionados a Excel"
-3. Haz clic en "Go"
-4. Se descargará un archivo Excel
-
-### 4. Verificar Importaciones
-
-1. Ve a "Logs de Importación"
-2. Verás todas las importaciones realizadas
-3. Revisa el estado y número de registros
-4. Si algo falló, verás el mensaje de error
-
-## Automatización
-
-### Importar Todas las Tablas desde CLI
+### Instalación de DRF (opcional)
 
 ```bash
-docker-compose exec web python manage.py import_moodle
+# Agregar a requirements.txt
+djangorestframework==3.14.0
+django-filter==24.3
+
+# Instalar
+docker-compose exec web pip install djangorestframework django-filter
+
+# Agregar a INSTALLED_APPS en settings.py
+'rest_framework',
+'django_filters',
 ```
 
-### Importar Tablas Específicas
+### Endpoints Sugeridos
 
-```bash
-docker-compose exec web python manage.py import_moodle --tables users,courses,groups
+#### Cursos
+```
+GET    /api/courses/              # Listar cursos
+GET    /api/courses/{id}/         # Detalle de curso
+POST   /api/courses/              # Crear curso
+PUT    /api/courses/{id}/         # Actualizar curso
+DELETE /api/courses/{id}/         # Eliminar curso
+GET    /api/courses/{id}/groups/  # Grupos del curso
+GET    /api/courses/{id}/stats/   # Estadísticas del curso
 ```
 
-### Programar Importaciones Automáticas
-
-Puedes usar cron para programar importaciones automáticas:
-
-```bash
-# Editar crontab
-crontab -e
-
-# Importar todos los días a las 2 AM
-0 2 * * * cd /ruta/a/moodle-stats && docker-compose exec -T web python manage.py import_moodle >> /var/log/moodle-import.log 2>&1
+#### Usuarios
+```
+GET    /api/users/                # Listar usuarios
+GET    /api/users/{id}/           # Detalle de usuario
+GET    /api/users/{id}/courses/   # Cursos del usuario
+GET    /api/users/{id}/groups/    # Grupos del usuario
+GET    /api/users/{id}/accesses/  # Accesos del usuario
 ```
 
-## Personalización del Admin
+#### Grupos
+```
+GET    /api/groups/               # Listar grupos
+GET    /api/groups/{id}/          # Detalle de grupo
+GET    /api/groups/{id}/members/  # Miembros del grupo
+GET    /api/groups/{id}/stats/    # Estadísticas del grupo
+```
 
-### Cambiar Campos Mostrados
+#### Estadísticas
+```
+GET    /api/stats/descriptive/    # Estadísticas descriptivas
+GET    /api/stats/correlation/    # Análisis de correlación
+GET    /api/stats/distribution/   # Distribución de accesos
+GET    /api/stats/trends/         # Tendencias temporales
+POST   /api/stats/custom/         # Análisis personalizado
+```
 
-Edita `moodledata/admin.py` y modifica `list_display`:
+#### Reportes
+```
+POST   /api/reports/weekly/       # Generar reporte semanal
+GET    /api/reports/{id}/         # Obtener reporte guardado
+GET    /api/reports/{id}/export/  # Exportar reporte (CSV/Excel)
+```
+
+### Ejemplo de Serializer
 
 ```python
-@admin.register(User)
-class UserAdmin(MoodleImportMixin, ExportToExcelMixin, admin.ModelAdmin):
-    list_display = ('moodle_id', 'username', 'email', 'imported_at')  # Agregar/quitar campos
+# apps/moodle/serializers.py
+from rest_framework import serializers
+from .models import Course, MoodleUser, Group
+
+class CourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields = ['id', 'shortname', 'fullname', 'category',
+                  'startdate', 'enddate', 'visible']
+
+class MoodleUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MoodleUser
+        fields = ['id', 'username', 'firstname', 'lastname', 'email']
+
+class GroupSerializer(serializers.ModelSerializer):
+    course_name = serializers.CharField(source='course.shortname', read_only=True)
+    member_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Group
+        fields = ['id', 'name', 'course', 'course_name',
+                  'description', 'member_count']
+
+    def get_member_count(self, obj):
+        return obj.members.count()
 ```
 
-### Agregar Filtros
-
-Edita `list_filter`:
+### Ejemplo de ViewSet
 
 ```python
-list_filter = ('suspended', 'country', 'city')  # Agregar más filtros
+# apps/moodle/viewsets.py
+from rest_framework import viewsets, filters
+from django_filters.rest_framework import DjangoFilterBackend
+from .models import Course, MoodleUser, Group
+from .serializers import CourseSerializer, MoodleUserSerializer, GroupSerializer
+
+class CourseViewSet(viewsets.ModelViewSet):
+    queryset = Course.objects.all()
+    serializer_class = CourseSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['category', 'visible']
+    search_fields = ['shortname', 'fullname']
+
+class MoodleUserViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = MoodleUser.objects.all()
+    serializer_class = MoodleUserSerializer
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['username', 'firstname', 'lastname', 'email']
+
+class GroupViewSet(viewsets.ModelViewSet):
+    queryset = Group.objects.all()
+    serializer_class = GroupSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['course']
 ```
 
-### Cambiar Campos de Búsqueda
-
-Edita `search_fields`:
+### Registrar URLs de API
 
 ```python
-search_fields = ('username', 'email', 'firstname', 'lastname', 'city')  # Más campos
+# config/urls.py
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from apps.moodle.viewsets import CourseViewSet, MoodleUserViewSet, GroupViewSet
+
+router = DefaultRouter()
+router.register('courses', CourseViewSet)
+router.register('users', MoodleUserViewSet)
+router.register('groups', GroupViewSet)
+
+urlpatterns = [
+    # ... URLs existentes
+    path('api/', include(router.urls)),
+    path('api-auth/', include('rest_framework.urls')),
+]
 ```
 
-## Consideraciones de Rendimiento
+## Permisos y Seguridad
 
-### Importación de Tablas Grandes
+### Configuración de Permisos en Admin
 
-Las tablas con muchos registros (100k+) pueden tardar varios minutos:
-- `users`: ~5-10 minutos
-- `user_enrolments`: ~10-15 minutos
-- `role_assignments`: ~5-10 minutos
+Django admin usa el sistema de permisos integrado:
 
-**Recomendación:** Usa el comando CLI en lugar del admin para tablas grandes.
+- `add_<model>`: Permiso para crear
+- `change_<model>`: Permiso para editar
+- `delete_<model>`: Permiso para eliminar
+- `view_<model>`: Permiso para ver
 
-### Exportación a Excel
+### Crear Usuario Staff
 
-Excel tiene un límite de ~1 millón de filas. Si necesitas exportar más:
-1. Usa filtros para reducir el conjunto de datos
-2. Exporta en múltiples archivos
-3. O considera usar CSV en lugar de Excel
+```python
+from django.contrib.auth.models import User
+user = User.objects.create_user('gestor', 'gestor@example.com', 'password123')
+user.is_staff = True  # Puede acceder al admin
+user.save()
 
-## Seguridad
+# Dar permisos específicos
+from django.contrib.auth.models import Permission
+perm = Permission.objects.get(codename='view_course')
+user.user_permissions.add(perm)
+```
 
-### Permisos
+### Configurar Permisos en DRF
 
-Por defecto, solo los superusuarios pueden:
-- Importar datos desde Moodle
-- Ver logs de importación
-- Exportar a Excel
+```python
+# settings.py
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+}
+```
 
-Para dar permisos a otros usuarios:
-1. En el admin, ve a "Usuarios"
-2. Edita el usuario
-3. Marca "Es staff" para darle acceso al admin
-4. Asigna permisos específicos según necesidad
+## Exportación de Datos desde Admin
 
-### Datos Sensibles
+### Exportar a CSV (Nativo de Django)
 
-Ten cuidado con:
-- Emails de usuarios
-- Información personal
-- No compartas exportaciones con personas no autorizadas
+1. Crear action en admin:
+
+```python
+# apps/moodle/admin.py
+import csv
+from django.http import HttpResponse
+
+def export_to_csv(modeladmin, request, queryset):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="export.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['ID', 'Nombre', 'Email'])  # Headers
+
+    for obj in queryset:
+        writer.writerow([obj.id, obj.username, obj.email])
+
+    return response
+
+export_to_csv.short_description = "Exportar a CSV"
+
+@admin.register(MoodleUser)
+class MoodleUserAdmin(admin.ModelAdmin):
+    actions = [export_to_csv]
+    # ... resto de la configuración
+```
+
+### Exportar a Excel
+
+```python
+from openpyxl import Workbook
+from django.http import HttpResponse
+
+def export_to_excel(modeladmin, request, queryset):
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="export.xlsx"'
+
+    wb = Workbook()
+    ws = wb.active
+    ws.append(['ID', 'Nombre', 'Email'])  # Headers
+
+    for obj in queryset:
+        ws.append([obj.id, obj.username, obj.email])
+
+    wb.save(response)
+    return response
+
+export_to_excel.short_description = "Exportar a Excel"
+```
+
+## Conclusión
+
+El sistema incluye:
+- ✅ Admin completo de Django con todos los modelos
+- ✅ Búsqueda, filtros y jerarquía temporal
+- ✅ Preparado para implementar API REST
+- ✅ Ejemplos de serializers y viewsets
+- ✅ Sistema de permisos integrado
+- ✅ Exportación a CSV/Excel
+
+Para más información sobre Django Admin: https://docs.djangoproject.com/en/5.1/ref/contrib/admin/
+Para Django REST Framework: https://www.django-rest-framework.org/

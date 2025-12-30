@@ -1,201 +1,149 @@
-# 🚀 Guía de Despliegue Rápido - Moodle Stats
+# Inicio Rápido - Romanova Platform
 
-## ¿Qué es esto?
+## Pasos para ejecutar el sistema
 
-Sistema Django completo para **importar, almacenar y analizar datos desde Moodle**.
-
-## ✨ Características
-
-- ✅ Importa 10 tablas de Moodle (usuarios, cursos, inscripciones, etc.)
-- ✅ Admin de Django para gestionar datos
-- ✅ Exportación a Excel
-- ✅ Docker con datos persistentes en el host
-- ✅ Tres formas de importar: UI, CLI, o programáticamente
-
-## 📦 Contenido del Paquete
-
-```
-moodle-stats/
-├── README.md              ← LEE ESTO PRIMERO
-├── ADMIN_API.md           ← Documentación del admin
-├── PROJECT_SUMMARY.md     ← Resumen ejecutivo
-├── docker-compose.yml     ← Configuración Docker
-├── Dockerfile
-├── requirements.txt
-├── install.sh             ← Script de instalación automática
-├── test_connection.py     ← Prueba de conexión a Moodle
-├── manage.py
-├── moodlestats/          ← Proyecto Django
-├── moodledata/           ← App con modelos y admin
-└── data/                 ← BD SQLite (creada al iniciar)
-```
-
-## 🎬 Inicio en 3 Pasos
-
-### 1. Extraer el archivo
+### 1. Levantar servicios
 
 ```bash
-tar -xzf moodle-stats-v1.0.tar.gz
-cd moodle-stats/
+docker compose up --build -d
 ```
 
-### 2. Configurar conexión a Moodle
+Espera unos segundos hasta que PostgreSQL esté listo.
 
-Edita `docker-compose.yml` y cambia estas líneas:
+### 2. Ejecutar migraciones e inicialización
 
+```bash
+docker compose exec web python manage.py makemigrations
+docker compose exec web python manage.py migrate
+```
+
+### 3. Crear superusuario
+
+```bash
+docker compose exec web python manage.py createsuperuser
+```
+
+O usa el script automático:
+
+```bash
+docker compose exec web bash -c "
+python manage.py shell << END
+from django.contrib.auth import get_user_model
+User = get_user_model()
+if not User.objects.filter(username='admin').exists():
+    User.objects.create_superuser('admin', 'admin@localhost', 'admin123')
+    print('✓ Superusuario creado: admin / admin123')
+else:
+    print('✓ Superusuario ya existe')
+END
+"
+```
+
+### 4. Cargar datos de prueba
+
+```bash
+docker compose exec web python manage.py load_mock_data --clear
+```
+
+Esto generará:
+- ✅ 5 categorías
+- ✅ 9 cursos (año actual)
+- ✅ 60 usuarios
+- ✅ 20+ grupos
+- ✅ Inscripciones y accesos realistas
+
+### 5. Acceder al sistema
+
+- **Web**: http://localhost:8008
+- **Admin**: http://localhost:8008/admin
+
+**Credenciales**: `admin` / `admin123`
+
+## Comandos útiles
+
+### Ver logs en tiempo real
+```bash
+docker compose logs -f web
+```
+
+### Reiniciar el sistema
+```bash
+docker compose restart
+```
+
+### Detener el sistema
+```bash
+docker compose down
+```
+
+### Resetear completamente (CUIDADO: elimina datos)
+```bash
+docker compose down -v
+docker compose up --build -d
+# Luego repetir pasos 2-4
+```
+
+### Acceder a shell de Python/Django
+```bash
+docker compose exec web python manage.py shell
+```
+
+### Acceder a base de datos
+```bash
+docker compose exec db psql -U msp_user -d moodle_stats
+```
+
+## Verificación
+
+Si todo funciona correctamente:
+
+1. ✅ Puedes hacer login en http://localhost:8000
+2. ✅ Ves cursos en el selector del panel
+3. ✅ Puedes generar reportes semanales
+4. ✅ El menú de "Estadísticas" tiene 6 opciones
+5. ✅ El admin muestra todos los modelos
+
+## Problemas comunes
+
+### Error: "port 5432 already in use"
+PostgreSQL ya está corriendo en tu sistema.
+
+**Solución**: Cambia el puerto en `docker compose.yml`:
 ```yaml
-environment:
-  - MOODLE_DB_HOST=localhost        # ← Cambia esto
-  - MOODLE_DB_NAME=moodle           # ← Cambia esto
-  - MOODLE_DB_USER=moodle_user      # ← Cambia esto
-  - MOODLE_DB_PASSWORD=tu_password  # ← Cambia esto
+ports:
+  - "5433:5432"  # Usar 5433 en vez de 5432
 ```
 
-### 3. Iniciar
+### Error: "port 8008 already in use"
+Otro servicio usa el puerto 8008.
 
-**Opción A - Instalación automática:**
+**Solución**: Cambia el puerto en `docker compose.yml`:
+```yaml
+ports:
+  - "8009:8000"  # Usar 8009 en vez de 8008
+```
+
+### No se cargan datos mock
+**Solución**: Verifica que las migraciones estén aplicadas:
 ```bash
-./install.sh
+docker compose exec web python manage.py migrate
+docker compose exec web python manage.py load_mock_data --clear
 ```
 
-**Opción B - Manual:**
+### Error de permisos
+**Solución**: Asegúrate de tener permisos:
 ```bash
-docker-compose up -d --build
+sudo chown -R $USER:$USER .
 ```
 
-¡Listo! Accede a: **http://localhost:8008/admin/**
-- Usuario: `admin`
-- Contraseña: `admin`
+## Próximos pasos
 
-## 🔍 Probar Conexión a Moodle
-
-Antes de importar, prueba que la conexión funcione:
-
-```bash
-docker-compose exec web python test_connection.py
-```
-
-Si ves ✅, todo está bien. Si ves ❌, revisa la configuración.
-
-## 📥 Importar Datos
-
-### Desde el Admin (Recomendado)
-1. Ve a http://localhost:8008/admin/
-2. Click en cualquier tabla (ej: "Usuarios")
-3. Click en "Importar desde Moodle" (botón verde)
-4. Confirma
-
-### Desde la Terminal
-```bash
-# Todas las tablas
-docker-compose exec web python manage.py import_moodle
-
-# Solo algunas
-docker-compose exec web python manage.py import_moodle --tables users,courses
-
-# Ver tablas disponibles
-docker-compose exec web python manage.py import_moodle --list
-```
-
-## 📊 Ver Datos
-
-1. En el admin, entra a cualquier tabla
-2. Usa filtros y búsqueda para encontrar datos
-3. Selecciona registros y exporta a Excel
-
-## 📚 Documentación Completa
-
-- **README.md** - Guía completa de instalación y uso
-- **ADMIN_API.md** - Documentación del admin y API
-- **PROJECT_SUMMARY.md** - Resumen técnico del proyecto
-
-## 🔧 Comandos Útiles
-
-```bash
-# Ver logs
-docker-compose logs -f
-
-# Parar
-docker-compose down
-
-# Reiniciar
-docker-compose restart
-
-# Entrar al contenedor
-docker-compose exec web bash
-
-# Crear superusuario adicional
-docker-compose exec web python manage.py createsuperuser
-```
-
-## 🐛 Problemas Comunes
-
-### "No se puede conectar a Moodle"
-1. Verifica que el host sea accesible desde Docker
-2. Revisa que las credenciales sean correctas
-3. Asegúrate que MySQL acepte conexiones remotas
-
-### "BD bloqueada"
-```bash
-docker-compose down
-docker-compose up -d
-```
-
-### "Permisos denegados"
-```bash
-sudo chown -R $USER:$USER ./data ./staticfiles
-```
-
-## 🔒 Seguridad
-
-⚠️ **En producción:**
-1. Cambia la SECRET_KEY en `settings.py`
-2. Establece DEBUG=False
-3. Configura ALLOWED_HOSTS
-4. Cambia las credenciales del admin
-5. Usa HTTPS (nginx + Let's Encrypt)
-
-## 💡 Tips
-
-- Los datos en `./data/` y `./staticfiles/` persisten incluso si eliminas el contenedor
-- Puedes modificar el código y se actualizará automáticamente (hot-reload)
-- Para tablas grandes (>100k registros), usa el comando CLI en lugar del admin
-- Revisa los logs de importación en el admin para ver errores
-
-## 📞 Soporte
-
-Para más información, lee los archivos de documentación incluidos:
-- README.md (guía completa)
-- ADMIN_API.md (documentación del admin)
-- PROJECT_SUMMARY.md (resumen técnico)
-
-## 🎓 Tecnologías
-
-- Django 5.1
-- Docker + Docker Compose
-- SQLite (dev) / MySQL (Moodle)
-- openpyxl (exportación Excel)
-- mysql-connector-python
-
-## ✅ Checklist de Despliegue
-
-- [ ] Extraer archivo
-- [ ] Editar docker-compose.yml con datos de Moodle
-- [ ] Ejecutar `docker-compose up -d --build`
-- [ ] Probar conexión con `test_connection.py`
-- [ ] Acceder al admin (http://localhost:8008/admin/)
-- [ ] Importar primera tabla de prueba
-- [ ] Verificar datos importados
-- [ ] Importar resto de tablas
-
-## 🎉 ¡Éxito!
-
-Si llegaste hasta aquí, tu sistema está listo para usar.
-
-Siguiente paso: Lee **README.md** para entender todas las capacidades del sistema.
+1. Explora el panel de reportes básicos
+2. Prueba los diferentes tipos de estadísticas
+3. Revisa el código en `apps/moodle/` y `apps/analytics/`
+4. Personaliza según tus necesidades
+5. Conecta a una base de datos real de Moodle (opcional)
 
 ---
 
-**Autor:** Carlos Dagorret
-**Versión:** 1.0.0
-**Fecha:** Diciembre 2024
+**¿Todo listo?** Abre http://localhost:8008 y comienza a usar el sistema.

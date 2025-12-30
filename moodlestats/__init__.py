@@ -1,1 +1,0 @@
-# Moodle Stats Django Project
