@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}Regresión y Predicción - Romanova Platform{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>📉 Análisis de Regresión y Predicción de Tendencias</h2>
+    <p class="subtitle">Análisis de {{ days_analyzed }} días con predicción de {{ weeks_predicted }} semanas futuras</p>
+
+    {% if predictions %}
+        {% for pred in predictions %}
+        <div class="card" style="margin-bottom: 30px;">
+            <h3>{{ pred.course.shortname }} - {{ pred.course.fullname }}</h3>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                <div>
+                    <h4>Métricas de Regresión</h4>
+                    <p><strong>Pendiente:</strong> {{ pred.slope }}</p>
+                    <p><strong>R² (ajuste):</strong> {{ pred.r_squared }}</p>
+                    <p><strong>Tendencia:</strong>
+                        <span style="color: {% if pred.trend == 'Creciente' %}green{% elif pred.trend == 'Decreciente' %}red{% else %}orange{% endif %};">
+                            {{ pred.trend }}
+                        </span>
+                    </p>
+                </div>
+                <div>
+                    <h4>Promedios</h4>
+                    <p><strong>Promedio actual:</strong> {{ pred.avg_current }} accesos/semana</p>
+                    <p><strong>Promedio predicho:</strong> {{ pred.avg_predicted }} accesos/semana</p>
+                    <p><strong>Cambio estimado:</strong>
+                        {% if pred.avg_predicted > pred.avg_current %}
+                            +{{ pred.avg_predicted|floatformat:2|add:pred.avg_current|floatformat:2 }}%
+                        {% else %}
+                            {{ pred.avg_predicted|floatformat:2|add:pred.avg_current|floatformat:2 }}%
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <h4>Datos Semanales Actuales</h4>
+            <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+                {% for value in pred.weekly_data %}
+                <div style="background: #4CAF50; height: {{ value|add:10 }}px; width: 20px; display: inline-block;" title="Semana {{ forloop.counter }}: {{ value }} accesos"></div>
+                {% endfor %}
+            </div>
+
+            <h4>Predicción Próximas Semanas</h4>
+            <div style="display: flex; gap: 5px;">
+                {% for value in pred.future_predictions %}
+                <div style="background: #2196F3; height: {{ value|add:10 }}px; width: 20px; display: inline-block;" title="Semana +{{ forloop.counter }}: {{ value }} accesos"></div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert">
+            <p>No hay suficientes datos para realizar predicciones.</p>
+        </div>
+    {% endif %}
+
+    <div style="margin-top: 30px;">
+        <a href="{% url 'analytics_menu' %}" class="button">← Volver al menú de estadísticas</a>
+    </div>
+</div>
+{% endblock %}

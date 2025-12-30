@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}Análisis de Roles por Curso - Romanova Platform{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>👥 Análisis de Roles por Curso</h2>
+    <p class="subtitle">Período: <strong>{{ date_from }}</strong> a <strong>{{ date_to }}</strong> ({{ days }} días, ~{{ weeks }} semanas)</p>
+
+    {% if course_stats %}
+        {% for course_stat in course_stats %}
+        <div class="card" style="margin-bottom: 30px;">
+            <h3>{{ course_stat.course.shortname }} - {{ course_stat.course.fullname }}</h3>
+            <p><strong>Total de accesos:</strong> {{ course_stat.total_accesses }}</p>
+
+            {% if course_stat.role_stats %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rol</th>
+                        <th>Usuarios Únicos</th>
+                        <th>Accesos Totales</th>
+                        <th>Promedio Semanal</th>
+                        <th>Promedio por Usuario</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for role, stats in course_stat.role_stats.items %}
+                    <tr>
+                        <td><strong>{{ role }}</strong></td>
+                        <td>{{ stats.unique_users }}</td>
+                        <td>{{ stats.total_accesses }}</td>
+                        <td>{{ stats.avg_weekly_accesses }}</td>
+                        <td>{{ stats.avg_accesses_per_user }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No hay datos de roles para este curso.</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert">
+            <p>No hay datos de accesos en los últimos {{ days }} días.</p>
+        </div>
+    {% endif %}
+
+    <div style="margin-top: 30px;">
+        <a href="{% url 'analytics_menu' %}" class="button">← Volver al menú de estadísticas</a>
+    </div>
+</div>
+{% endblock %}

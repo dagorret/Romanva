@@ -136,6 +136,47 @@ class UserEnrolment(models.Model):
         return f"{self.user} inscrito en {self.enrol.course.shortname}"
 
 
+class Role(models.Model):
+    """Roles de Moodle (estudiante, profesor, etc.)"""
+    ROLE_TYPES = [
+        ('student', 'Estudiante'),
+        ('teacher', 'Profesor'),
+        ('editingteacher', 'Profesor editor'),
+        ('manager', 'Gestor'),
+    ]
+
+    name = models.CharField(max_length=255, verbose_name='Nombre')
+    shortname = models.CharField(max_length=100, choices=ROLE_TYPES,
+                                  default='student', verbose_name='Código')
+
+    class Meta:
+        verbose_name = 'Rol'
+        verbose_name_plural = 'Roles'
+
+    def __str__(self):
+        return self.name
+
+
+class RoleAssignment(models.Model):
+    """Asignación de roles a usuarios en cursos"""
+    role = models.ForeignKey(Role, on_delete=models.CASCADE,
+                             related_name='assignments', verbose_name='Rol')
+    user = models.ForeignKey(MoodleUser, on_delete=models.CASCADE,
+                             related_name='role_assignments', verbose_name='Usuario')
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True,
+                               related_name='role_assignments', verbose_name='Curso')
+    timecreated = models.DateTimeField(auto_now_add=True, verbose_name='Creado')
+
+    class Meta:
+        verbose_name = 'Asignación de rol'
+        verbose_name_plural = 'Asignaciones de roles'
+        unique_together = ['role', 'user', 'course']
+
+    def __str__(self):
+        course_str = f" en {self.course.shortname}" if self.course else ""
+        return f"{self.user} - {self.role.name}{course_str}"
+
+
 class UserLastAccess(models.Model):
     """Último acceso de usuarios a cursos"""
     user = models.ForeignKey(MoodleUser, on_delete=models.CASCADE,

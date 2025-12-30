@@ -10,7 +10,7 @@ import json
 
 from apps.moodle.models import (
     Course, MoodleUser, UserLastAccess, UserEnrolment,
-    Group, GroupMember, Category
+    Group, GroupMember, Category, Role, RoleAssignment
 )
 
 
@@ -19,41 +19,91 @@ def analytics_menu(request):
     """Menú principal de estadísticas"""
     context = {
         'stats_options': [
+            # Análisis Básicos
             {
                 'name': 'Estadísticas Descriptivas',
                 'description': 'Media, mediana, moda, desviación estándar, varianza',
                 'url': 'descriptive_stats',
-                'icon': '📊'
+                'icon': '📊',
+                'category': 'basic'
             },
             {
                 'name': 'Análisis de Correlación',
                 'description': 'Correlación entre variables de acceso y rendimiento',
                 'url': 'correlation_analysis',
-                'icon': '🔗'
+                'icon': '🔗',
+                'category': 'basic'
             },
             {
                 'name': 'Distribución de Accesos',
                 'description': 'Histogramas y distribución temporal de accesos',
                 'url': 'access_distribution',
-                'icon': '📈'
+                'icon': '📈',
+                'category': 'basic'
             },
             {
                 'name': 'Comparación entre Grupos',
                 'description': 'Comparar métricas entre diferentes grupos',
                 'url': 'group_comparison',
-                'icon': '⚖️'
+                'icon': '⚖️',
+                'category': 'basic'
             },
             {
                 'name': 'Tendencias Temporales',
                 'description': 'Análisis de series de tiempo y tendencias',
                 'url': 'temporal_trends',
-                'icon': '📉'
+                'icon': '📉',
+                'category': 'basic'
             },
             {
                 'name': 'Panel Personalizado',
                 'description': 'Selecciona variables y operaciones estadísticas',
                 'url': 'custom_panel',
-                'icon': '🎛️'
+                'icon': '🎛️',
+                'category': 'basic'
+            },
+            # Análisis Avanzados
+            {
+                'name': 'Análisis de Roles por Curso',
+                'description': 'Últimos 120 días: accesos por rol, cantidad y promedio semanal',
+                'url': 'role_analysis',
+                'icon': '👥',
+                'category': 'advanced'
+            },
+            {
+                'name': 'Regresión y Predicción',
+                'description': 'Predicción de tendencias futuras con regresión lineal',
+                'url': 'regression_analysis',
+                'icon': '📉',
+                'category': 'advanced'
+            },
+            {
+                'name': 'Clustering de Estudiantes',
+                'description': 'Agrupamiento por patrones de comportamiento (K-Means)',
+                'url': 'clustering_analysis',
+                'icon': '🎯',
+                'category': 'advanced'
+            },
+            {
+                'name': 'Análisis de Supervivencia',
+                'description': 'Retención y abandono de estudiantes por cohortes',
+                'url': 'survival_analysis',
+                'icon': '📊',
+                'category': 'advanced'
+            },
+            {
+                'name': 'Heatmap de Actividad',
+                'description': 'Patrones temporales: día de semana y hora del día',
+                'url': 'heatmap_activity',
+                'icon': '🔥',
+                'category': 'advanced'
+            },
+            {
+                'name': 'Análisis PCA',
+                'description': 'Componentes Principales: reducción dimensional de datos',
+                'url': 'pca_analysis',
+                'icon': '🧬',
+                'category': 'advanced'
             },
         ]
     }
@@ -330,3 +380,437 @@ def calculate_custom_stats(variables, operation):
                 results[var] = round(variance ** 0.5, 2)
 
     return results
+
+
+# ============================================================================
+# MÓDULOS ESTADÍSTICOS AVANZADOS
+# ============================================================================
+
+@login_required
+def role_analysis(request):
+    """Análisis de roles por curso - Últimos 120 días con promedios semanales"""
+    from collections import defaultdict
+
+    # Fecha límite: últimos 120 días
+    date_limit = timezone.now() - timedelta(days=120)
+
+    # Obtener cursos con actividad reciente
+    courses = Course.objects.filter(
+        visible=True,
+        user_accesses__timeaccess__gte=date_limit
+    ).distinct()[:20]
+
+    course_stats = []
+    for course in courses:
+        # Estadísticas por rol
+        role_stats = defaultdict(lambda: {'total_accesses': 0, 'unique_users': set()})
+
+        # Obtener accesos de los últimos 120 días para este curso
+        accesses = UserLastAccess.objects.filter(
+            course=course,
+            timeaccess__gte=date_limit
+        ).select_related('user')
+
+        for access in accesses:
+            # Obtener rol del usuario en este curso
+            role_assignment = RoleAssignment.objects.filter(
+                user=access.user,
+                course=course
+            ).select_related('role').first()
+
+            if role_assignment:
+                role_name = role_assignment.role.get_shortname_display()
+            else:
+                role_name = 'Sin rol'
+
+            role_stats[role_name]['total_accesses'] += 1
+            role_stats[role_name]['unique_users'].add(access.user.id)
+
+        # Calcular promedios semanales (120 días = ~17 semanas)
+        weeks = 17
+        for role_name in role_stats:
+            total_accesses = role_stats[role_name]['total_accesses']
+            unique_users = len(role_stats[role_name]['unique_users'])
+
+            role_stats[role_name] = {
+                'total_accesses': total_accesses,
+                'unique_users': unique_users,
+                'avg_weekly_accesses': round(total_accesses / weeks, 2),
+                'avg_accesses_per_user': round(total_accesses / unique_users, 2) if unique_users > 0 else 0,
+            }
+
+        course_stats.append({
+            'course': course,
+            'role_stats': dict(role_stats),
+            'total_accesses': sum(s['total_accesses'] for s in role_stats.values()),
+        })
+
+    # Ordenar por total de accesos
+    course_stats.sort(key=lambda x: x['total_accesses'], reverse=True)
+
+    context = {
+        'course_stats': course_stats,
+        'days': 120,
+        'weeks': 17,
+        'date_from': date_limit.strftime('%Y-%m-%d'),
+        'date_to': timezone.now().strftime('%Y-%m-%d'),
+    }
+    return render(request, 'analytics/role_analysis.html', context)
+
+
+@login_required
+def regression_analysis(request):
+    """Análisis de regresión y predicción de tendencias"""
+    import numpy as np
+    from scipy import stats
+
+    # Obtener cursos activos
+    courses = Course.objects.filter(visible=True)[:10]
+
+    predictions = []
+    for course in courses:
+        # Obtener accesos de los últimos 90 días
+        days = 90
+        date_limit = timezone.now() - timedelta(days=days)
+
+        # Agrupar accesos por semana
+        weekly_data = []
+        for week in range(int(days/7)):
+            week_start = date_limit + timedelta(weeks=week)
+            week_end = week_start + timedelta(days=7)
+
+            count = UserLastAccess.objects.filter(
+                course=course,
+                timeaccess__gte=week_start,
+                timeaccess__lt=week_end
+            ).count()
+
+            weekly_data.append(count)
+
+        if len(weekly_data) > 2 and sum(weekly_data) > 0:
+            # Regresión lineal
+            x = np.array(range(len(weekly_data)))
+            y = np.array(weekly_data)
+
+            slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+
+            # Predecir próximas 4 semanas
+            future_weeks = []
+            for i in range(4):
+                prediction = slope * (len(weekly_data) + i) + intercept
+                future_weeks.append(max(0, round(prediction, 2)))  # No negativos
+
+            predictions.append({
+                'course': course,
+                'weekly_data': weekly_data,
+                'slope': round(slope, 3),
+                'r_squared': round(r_value ** 2, 3),
+                'trend': 'Creciente' if slope > 0.5 else 'Decreciente' if slope < -0.5 else 'Estable',
+                'future_predictions': future_weeks,
+                'avg_current': round(sum(weekly_data) / len(weekly_data), 2),
+                'avg_predicted': round(sum(future_weeks) / len(future_weeks), 2),
+            })
+
+    context = {
+        'predictions': predictions,
+        'days_analyzed': 90,
+        'weeks_predicted': 4,
+    }
+    return render(request, 'analytics/regression_analysis.html', context)
+
+
+@login_required
+def clustering_analysis(request):
+    """Análisis de clustering - Agrupamiento de estudiantes por patrones"""
+    from sklearn.cluster import KMeans
+    from sklearn.preprocessing import StandardScaler
+    import numpy as np
+
+    # Obtener estudiantes con actividad
+    date_limit = timezone.now() - timedelta(days=90)
+
+    # Construir matriz de características
+    students_data = []
+    students_info = []
+
+    for user in MoodleUser.objects.all()[:200]:  # Limitar para performance
+        # Características del estudiante
+        total_accesses = UserLastAccess.objects.filter(
+            user=user,
+            timeaccess__gte=date_limit
+        ).count()
+
+        courses_enrolled = UserEnrolment.objects.filter(user=user).count()
+        groups_count = GroupMember.objects.filter(user=user).count()
+
+        # Calcular días promedio entre accesos
+        accesses = UserLastAccess.objects.filter(
+            user=user,
+            timeaccess__gte=date_limit
+        ).order_by('timeaccess')
+
+        if accesses.count() > 1:
+            time_deltas = []
+            for i in range(1, len(accesses)):
+                delta = (accesses[i].timeaccess - accesses[i-1].timeaccess).days
+                time_deltas.append(delta)
+            avg_days_between = sum(time_deltas) / len(time_deltas) if time_deltas else 0
+        else:
+            avg_days_between = 0
+
+        if total_accesses > 0:  # Solo estudiantes activos
+            students_data.append([
+                total_accesses,
+                courses_enrolled,
+                groups_count,
+                avg_days_between
+            ])
+            students_info.append({
+                'user': user,
+                'total_accesses': total_accesses,
+                'courses_enrolled': courses_enrolled,
+                'groups_count': groups_count,
+            })
+
+    clusters_result = []
+    if len(students_data) >= 3:  # Mínimo 3 estudiantes para clustering
+        # Normalizar datos
+        scaler = StandardScaler()
+        X = scaler.fit_transform(np.array(students_data))
+
+        # Aplicar K-Means con 3 clusters
+        n_clusters = min(3, len(students_data))
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+        labels = kmeans.fit_predict(X)
+
+        # Agrupar resultados por cluster
+        for cluster_id in range(n_clusters):
+            cluster_members = [
+                students_info[i] for i in range(len(labels)) if labels[i] == cluster_id
+            ]
+
+            if cluster_members:
+                avg_accesses = sum(s['total_accesses'] for s in cluster_members) / len(cluster_members)
+                avg_courses = sum(s['courses_enrolled'] for s in cluster_members) / len(cluster_members)
+
+                # Clasificar cluster
+                if avg_accesses > 20:
+                    cluster_type = 'Muy Activos'
+                elif avg_accesses > 10:
+                    cluster_type = 'Moderadamente Activos'
+                else:
+                    cluster_type = 'Poco Activos'
+
+                clusters_result.append({
+                    'id': cluster_id + 1,
+                    'type': cluster_type,
+                    'size': len(cluster_members),
+                    'avg_accesses': round(avg_accesses, 2),
+                    'avg_courses': round(avg_courses, 2),
+                    'members': cluster_members[:10],  # Mostrar primeros 10
+                })
+
+    context = {
+        'clusters': clusters_result,
+        'total_students': len(students_data),
+        'days_analyzed': 90,
+    }
+    return render(request, 'analytics/clustering_analysis.html', context)
+
+
+@login_required
+def survival_analysis(request):
+    """Análisis de supervivencia - Retención y abandono de estudiantes"""
+    # Analizar retención por cohorte (mes de inscripción)
+    from collections import defaultdict
+
+    cohorts = defaultdict(lambda: {'enrolled': 0, 'active': 0, 'inactive': 0})
+
+    # Definir "activo" como acceso en últimos 30 días
+    activity_threshold = timezone.now() - timedelta(days=30)
+
+    # Agrupar por mes de inscripción
+    enrollments = UserEnrolment.objects.all().select_related('user', 'enrol__course')
+
+    for enrollment in enrollments:
+        cohort_month = enrollment.timecreated.strftime('%Y-%m')
+        cohorts[cohort_month]['enrolled'] += 1
+
+        # Verificar si el usuario ha accedido recientemente
+        recent_access = UserLastAccess.objects.filter(
+            user=enrollment.user,
+            timeaccess__gte=activity_threshold
+        ).exists()
+
+        if recent_access:
+            cohorts[cohort_month]['active'] += 1
+        else:
+            cohorts[cohort_month]['inactive'] += 1
+
+    # Calcular tasas de retención
+    cohort_stats = []
+    for month, data in sorted(cohorts.items(), reverse=True)[:12]:  # Últimos 12 meses
+        retention_rate = (data['active'] / data['enrolled'] * 100) if data['enrolled'] > 0 else 0
+        churn_rate = 100 - retention_rate
+
+        cohort_stats.append({
+            'month': month,
+            'enrolled': data['enrolled'],
+            'active': data['active'],
+            'inactive': data['inactive'],
+            'retention_rate': round(retention_rate, 2),
+            'churn_rate': round(churn_rate, 2),
+        })
+
+    # Estadísticas globales
+    total_enrolled = sum(c['enrolled'] for c in cohort_stats)
+    total_active = sum(c['active'] for c in cohort_stats)
+    global_retention = (total_active / total_enrolled * 100) if total_enrolled > 0 else 0
+
+    context = {
+        'cohorts': cohort_stats,
+        'total_enrolled': total_enrolled,
+        'total_active': total_active,
+        'total_inactive': total_enrolled - total_active,
+        'global_retention_rate': round(global_retention, 2),
+        'activity_threshold_days': 30,
+    }
+    return render(request, 'analytics/survival_analysis.html', context)
+
+
+@login_required
+def heatmap_activity(request):
+    """Heatmap de actividad temporal - Patrones por día de semana y hora"""
+    from collections import defaultdict
+
+    # Obtener accesos de los últimos 60 días
+    date_limit = timezone.now() - timedelta(days=60)
+    accesses = UserLastAccess.objects.filter(timeaccess__gte=date_limit)
+
+    # Matriz: día de semana (0-6) x hora (0-23)
+    heatmap_data = defaultdict(lambda: defaultdict(int))
+
+    for access in accesses:
+        day_of_week = access.timeaccess.weekday()  # 0=Lunes, 6=Domingo
+        hour = access.timeaccess.hour
+        heatmap_data[day_of_week][hour] += 1
+
+    # Convertir a formato para template
+    days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+    hours = list(range(24))
+
+    heatmap_matrix = []
+    for day_idx in range(7):
+        row = {
+            'day': days[day_idx],
+            'hours': [heatmap_data[day_idx][hour] for hour in hours]
+        }
+        heatmap_matrix.append(row)
+
+    # Encontrar picos de actividad
+    max_activity = 0
+    peak_times = []
+    for day_idx, day_data in heatmap_data.items():
+        for hour, count in day_data.items():
+            if count > max_activity:
+                max_activity = count
+            if count > 10:  # Umbral arbitrario
+                peak_times.append({
+                    'day': days[day_idx],
+                    'hour': f"{hour:02d}:00",
+                    'count': count
+                })
+
+    peak_times.sort(key=lambda x: x['count'], reverse=True)
+
+    context = {
+        'heatmap_matrix': heatmap_matrix,
+        'hours': hours,
+        'max_activity': max_activity,
+        'peak_times': peak_times[:10],  # Top 10
+        'days_analyzed': 60,
+    }
+    return render(request, 'analytics/heatmap_activity.html', context)
+
+
+@login_required
+def pca_analysis(request):
+    """Análisis de Componentes Principales - Reducción dimensional"""
+    from sklearn.decomposition import PCA
+    from sklearn.preprocessing import StandardScaler
+    import numpy as np
+
+    # Construir matriz de características de cursos
+    courses_data = []
+    courses_info = []
+
+    for course in Course.objects.filter(visible=True)[:50]:
+        # Características del curso
+        total_enrolled = UserEnrolment.objects.filter(enrol__course=course).count()
+        total_accesses = UserLastAccess.objects.filter(course=course).count()
+        groups_count = Group.objects.filter(course=course).count()
+
+        # Calcular engagement rate
+        unique_accessors = UserLastAccess.objects.filter(course=course).values('user').distinct().count()
+        engagement_rate = (unique_accessors / total_enrolled * 100) if total_enrolled > 0 else 0
+
+        # Días desde inicio
+        if course.startdate:
+            days_active = (timezone.now() - course.startdate).days
+        else:
+            days_active = 0
+
+        if total_enrolled > 0:  # Solo cursos con estudiantes
+            courses_data.append([
+                total_enrolled,
+                total_accesses,
+                groups_count,
+                engagement_rate,
+                days_active
+            ])
+            courses_info.append({
+                'course': course,
+                'total_enrolled': total_enrolled,
+                'total_accesses': total_accesses,
+                'engagement_rate': round(engagement_rate, 2),
+            })
+
+    pca_results = []
+    if len(courses_data) >= 3:
+        # Normalizar datos
+        scaler = StandardScaler()
+        X = scaler.fit_transform(np.array(courses_data))
+
+        # Aplicar PCA
+        n_components = min(3, len(courses_data))
+        pca = PCA(n_components=n_components)
+        X_pca = pca.fit_transform(X)
+
+        # Varianza explicada
+        variance_explained = pca.explained_variance_ratio_ * 100
+
+        # Componentes principales
+        for i, course_info in enumerate(courses_info):
+            pca_results.append({
+                'course': course_info['course'],
+                'pc1': round(X_pca[i][0], 3) if n_components > 0 else 0,
+                'pc2': round(X_pca[i][1], 3) if n_components > 1 else 0,
+                'pc3': round(X_pca[i][2], 3) if n_components > 2 else 0,
+                'total_enrolled': course_info['total_enrolled'],
+                'total_accesses': course_info['total_accesses'],
+            })
+
+        variance_info = [
+            {'component': f'PC{i+1}', 'variance': round(var, 2)}
+            for i, var in enumerate(variance_explained)
+        ]
+    else:
+        variance_info = []
+
+    context = {
+        'pca_results': pca_results[:20],  # Top 20 para visualización
+        'variance_explained': variance_info,
+        'total_courses': len(courses_data),
+        'n_components': len(variance_info),
+    }
+    return render(request, 'analytics/pca_analysis.html', context)

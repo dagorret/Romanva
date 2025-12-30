@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Heatmap de Actividad - Romanova Platform{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>🔥 Heatmap de Actividad Temporal</h2>
+    <p class="subtitle">Patrones de acceso por día de semana y hora (últimos {{ days_analyzed }} días)</p>
+
+    {% if heatmap_matrix %}
+        <div class="card" style="margin-bottom: 30px;">
+            <h3>Matriz de Actividad</h3>
+            <p><strong>Actividad máxima:</strong> {{ max_activity }} accesos</p>
+
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 8px; border: 1px solid #ddd;">Día</th>
+                            {% for hour in hours %}
+                            <th style="padding: 8px; border: 1px solid #ddd; font-size: 0.8em;">{{ hour }}h</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in heatmap_matrix %}
+                        <tr>
+                            <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">{{ row.day }}</td>
+                            {% for count in row.hours %}
+                            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;
+                                       background-color: rgba(76, 175, 80, {{ count|divisibleby:max_activity|default:0.1 }});">
+                                {% if count > 0 %}{{ count }}{% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <p style="margin-top: 20px; font-size: 0.9em; color: #666;">
+                <strong>Leyenda:</strong> Cuanto más verde, mayor actividad. Celdas vacías = 0 accesos.
+            </p>
+        </div>
+
+        {% if peak_times %}
+        <div class="card">
+            <h3>🔝 Top 10 Picos de Actividad</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Día</th>
+                        <th>Hora</th>
+                        <th>Accesos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for peak in peak_times %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ peak.day }}</td>
+                        <td>{{ peak.hour }}</td>
+                        <td><strong>{{ peak.count }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="alert">
+            <p>No hay datos de actividad en los últimos {{ days_analyzed }} días.</p>
+        </div>
+    {% endif %}
+
+    <div style="margin-top: 30px;">
+        <a href="{% url 'analytics_menu' %}" class="button">← Volver al menú de estadísticas</a>
+    </div>
+</div>
+{% endblock %}

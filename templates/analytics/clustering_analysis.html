@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}Clustering de Estudiantes - Romanova Platform{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>🎯 Análisis de Clustering - Agrupamiento de Estudiantes</h2>
+    <p class="subtitle">{{ total_students }} estudiantes analizados (últimos {{ days_analyzed }} días) - Algoritmo K-Means</p>
+
+    {% if clusters %}
+        <div style="margin-bottom: 30px;">
+            <h3>Resumen de Clusters</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                {% for cluster in clusters %}
+                <div class="card" style="text-align: center;">
+                    <h4>Cluster {{ cluster.id }}: {{ cluster.type }}</h4>
+                    <p style="font-size: 2em; margin: 10px 0;">{{ cluster.size }}</p>
+                    <p>estudiantes</p>
+                    <hr>
+                    <p><strong>Promedio de accesos:</strong> {{ cluster.avg_accesses }}</p>
+                    <p><strong>Promedio de cursos:</strong> {{ cluster.avg_courses }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        {% for cluster in clusters %}
+        <div class="card" style="margin-bottom: 30px;">
+            <h3>Cluster {{ cluster.id }}: {{ cluster.type }} ({{ cluster.size }} estudiantes)</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Total Accesos</th>
+                        <th>Cursos Inscritos</th>
+                        <th>Grupos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in cluster.members %}
+                    <tr>
+                        <td>{{ member.user.fullname }}</td>
+                        <td>{{ member.total_accesses }}</td>
+                        <td>{{ member.courses_enrolled }}</td>
+                        <td>{{ member.groups_count }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% if cluster.size > 10 %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; font-style: italic;">
+                            ... y {{ cluster.size|add:-10 }} estudiantes más
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert">
+            <p>No hay suficientes datos para realizar clustering (mínimo 3 estudiantes activos).</p>
+        </div>
+    {% endif %}
+
+    <div style="margin-top: 30px;">
+        <a href="{% url 'analytics_menu' %}" class="button">← Volver al menú de estadísticas</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Análisis de Supervivencia - Romanova Platform{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>📊 Análisis de Supervivencia - Retención y Abandono</h2>
+    <p class="subtitle">Análisis de cohortes por mes de inscripción (últimos 12 meses)</p>
+    <p><strong>Criterio de actividad:</strong> Acceso en los últimos {{ activity_threshold_days }} días</p>
+
+    <div class="card" style="margin-bottom: 30px;">
+        <h3>Estadísticas Globales</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; text-align: center;">
+            <div>
+                <p style="font-size: 2em; margin: 10px 0; color: #2196F3;">{{ total_enrolled }}</p>
+                <p>Total Inscritos</p>
+            </div>
+            <div>
+                <p style="font-size: 2em; margin: 10px 0; color: #4CAF50;">{{ total_active }}</p>
+                <p>Activos</p>
+            </div>
+            <div>
+                <p style="font-size: 2em; margin: 10px 0; color: #F44336;">{{ total_inactive }}</p>
+                <p>Inactivos</p>
+            </div>
+            <div>
+                <p style="font-size: 2em; margin: 10px 0; color: #FF9800;">{{ global_retention_rate }}%</p>
+                <p>Tasa de Retención</p>
+            </div>
+        </div>
+    </div>
+
+    {% if cohorts %}
+        <div class="card">
+            <h3>Análisis por Cohorte</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mes</th>
+                        <th>Inscritos</th>
+                        <th>Activos</th>
+                        <th>Inactivos</th>
+                        <th>Retención</th>
+                        <th>Abandono</th>
+                        <th>Visualización</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cohort in cohorts %}
+                    <tr>
+                        <td><strong>{{ cohort.month }}</strong></td>
+                        <td>{{ cohort.enrolled }}</td>
+                        <td style="color: #4CAF50;">{{ cohort.active }}</td>
+                        <td style="color: #F44336;">{{ cohort.inactive }}</td>
+                        <td><strong>{{ cohort.retention_rate }}%</strong></td>
+                        <td>{{ cohort.churn_rate }}%</td>
+                        <td>
+                            <div style="display: flex; width: 100px; height: 20px; background: #F44336;">
+                                <div style="width: {{ cohort.retention_rate }}%; background: #4CAF50;"></div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card" style="margin-top: 30px;">
+            <h3>Interpretación</h3>
+            <ul>
+                <li><strong>Retención:</strong> Porcentaje de estudiantes que accedieron en los últimos {{ activity_threshold_days }} días</li>
+                <li><strong>Abandono (Churn):</strong> Porcentaje de estudiantes que NO accedieron en los últimos {{ activity_threshold_days }} días</li>
+                <li><strong>Cohorte:</strong> Grupo de estudiantes inscritos en el mismo mes</li>
+            </ul>
+        </div>
+    {% else %}
+        <div class="alert">
+            <p>No hay datos de cohortes disponibles.</p>
+        </div>
+    {% endif %}
+
+    <div style="margin-top: 30px;">
+        <a href="{% url 'analytics_menu' %}" class="button">← Volver al menú de estadísticas</a>
+    </div>
+</div>
+{% endblock %}

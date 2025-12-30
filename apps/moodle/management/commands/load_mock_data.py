@@ -8,7 +8,7 @@ from datetime import timedelta
 import random
 from apps.moodle.models import (
     Category, Course, MoodleUser, Group, GroupMember,
-    Enrol, UserEnrolment, UserLastAccess
+    Enrol, UserEnrolment, UserLastAccess, Role, RoleAssignment
 )
 
 # CONSTANTES DE CONFIGURACIÓN
@@ -341,6 +341,59 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(f'✓ {UserLastAccess.objects.count()} registros de acceso creados'))
 
+        # 7. CREAR ROLES Y ASIGNACIONES
+        self.stdout.write(self.style.WARNING('\n[7/7] Creando roles y asignaciones...'))
+
+        # Crear roles básicos
+        role_student, _ = Role.objects.get_or_create(
+            shortname='student',
+            defaults={'name': 'Estudiante'}
+        )
+        role_teacher, _ = Role.objects.get_or_create(
+            shortname='teacher',
+            defaults={'name': 'Profesor'}
+        )
+        role_editing, _ = Role.objects.get_or_create(
+            shortname='editingteacher',
+            defaults={'name': 'Profesor Editor'}
+        )
+
+        self.stdout.write(f'  Creados {Role.objects.count()} roles')
+
+        # Asignar roles a usuarios en cursos
+        role_assignments = []
+        all_users = list(MoodleUser.objects.all())
+        all_courses = list(Course.objects.all())
+
+        # 95% estudiantes, 4% profesores, 1% editores
+        for enrollment in UserEnrolment.objects.select_related('user', 'enrol__course'):
+            rand = random.random()
+            if rand < 0.95:  # 95% estudiantes
+                role = role_student
+            elif rand < 0.99:  # 4% profesores
+                role = role_teacher
+            else:  # 1% editores
+                role = role_editing
+
+            role_assignments.append(
+                RoleAssignment(
+                    role=role,
+                    user=enrollment.user,
+                    course=enrollment.enrol.course
+                )
+            )
+
+            # Bulk create cada 5000
+            if len(role_assignments) >= 5000:
+                RoleAssignment.objects.bulk_create(role_assignments, ignore_conflicts=True)
+                self.stdout.write(f'  Creadas {len(role_assignments)} asignaciones de roles...')
+                role_assignments = []
+
+        if role_assignments:
+            RoleAssignment.objects.bulk_create(role_assignments, ignore_conflicts=True)
+
+        self.stdout.write(self.style.SUCCESS(f'✓ {RoleAssignment.objects.count()} asignaciones de roles creadas'))
+
         # Resumen final
         self.stdout.write('\n' + '='*70)
         self.stdout.write(self.style.SUCCESS('RESUMEN DE DATOS GENERADOS:'))
@@ -353,5 +406,7 @@ class Command(BaseCommand):
         self.stdout.write(f'  Métodos de inscripción: {Enrol.objects.count()}')
         self.stdout.write(f'  Inscripciones: {UserEnrolment.objects.count()}')
         self.stdout.write(f'  Registros de acceso: {UserLastAccess.objects.count()}')
+        self.stdout.write(f'  Roles: {Role.objects.count()}')
+        self.stdout.write(f'  Asignaciones de roles: {RoleAssignment.objects.count()}')
         self.stdout.write('='*70)
         self.stdout.write(self.style.SUCCESS('\n✓ Datos mock cargados exitosamente'))

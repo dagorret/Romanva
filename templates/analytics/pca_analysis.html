@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}Análisis PCA - Romanova Platform{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>🧬 Análisis de Componentes Principales (PCA)</h2>
+    <p class="subtitle">Reducción dimensional de {{ total_courses }} cursos a {{ n_components }} componentes principales</p>
+
+    {% if variance_explained %}
+        <div class="card" style="margin-bottom: 30px;">
+            <h3>Varianza Explicada por Componente</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Componente</th>
+                        <th>Varianza Explicada (%)</th>
+                        <th>Visualización</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for var in variance_explained %}
+                    <tr>
+                        <td><strong>{{ var.component }}</strong></td>
+                        <td>{{ var.variance }}%</td>
+                        <td>
+                            <div style="width: {{ var.variance|floatformat:0 }}%; height: 20px; background: #2196F3;"></div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <p style="margin-top: 20px;">
+                <strong>Total explicado:</strong>
+                {% widthratio variance_explained|length 1 100 as total %}
+                {{ total }}%
+            </p>
+        </div>
+    {% endif %}
+
+    {% if pca_results %}
+        <div class="card">
+            <h3>Proyección de Cursos en Componentes Principales</h3>
+            <p style="margin-bottom: 20px; color: #666;">
+                Los componentes principales representan combinaciones lineales de las variables originales
+                (inscritos, accesos, engagement, etc.) que capturan la mayor varianza en los datos.
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Curso</th>
+                        <th>Inscritos</th>
+                        <th>Accesos</th>
+                        {% if n_components >= 1 %}<th>PC1</th>{% endif %}
+                        {% if n_components >= 2 %}<th>PC2</th>{% endif %}
+                        {% if n_components >= 3 %}<th>PC3</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in pca_results %}
+                    <tr>
+                        <td><strong>{{ result.course.shortname }}</strong></td>
+                        <td>{{ result.total_enrolled }}</td>
+                        <td>{{ result.total_accesses }}</td>
+                        {% if n_components >= 1 %}<td>{{ result.pc1 }}</td>{% endif %}
+                        {% if n_components >= 2 %}<td>{{ result.pc2 }}</td>{% endif %}
+                        {% if n_components >= 3 %}<td>{{ result.pc3 }}</td>{% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card" style="margin-top: 30px;">
+            <h3>Interpretación</h3>
+            <ul>
+                <li><strong>PC1 (Componente Principal 1):</strong> Captura la mayor variabilidad en los datos</li>
+                <li><strong>PC2:</strong> Captura la segunda mayor variabilidad, ortogonal a PC1</li>
+                <li><strong>PC3:</strong> Captura la tercera mayor variabilidad, ortogonal a PC1 y PC2</li>
+                <li>Valores positivos altos indican cursos con características "extremas" en esa dimensión</li>
+                <li>Valores cercanos a 0 indican cursos "promedio" en esa dimensión</li>
+            </ul>
+        </div>
+    {% else %}
+        <div class="alert">
+            <p>No hay suficientes datos para realizar PCA (mínimo 3 cursos con estudiantes).</p>
+        </div>
+    {% endif %}
+
+    <div style="margin-top: 30px;">
+        <a href="{% url 'analytics_menu' %}" class="button">← Volver al menú de estadísticas</a>
+    </div>
+</div>
+{% endblock %}

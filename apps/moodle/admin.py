@@ -4,7 +4,7 @@ Admin interface para los modelos de Moodle
 from django.contrib import admin
 from .models import (
     Category, Course, MoodleUser, Group, GroupMember,
-    Enrol, UserEnrolment, UserLastAccess
+    Enrol, UserEnrolment, UserLastAccess, Role, RoleAssignment
 )
 
 
@@ -66,3 +66,18 @@ class UserLastAccessAdmin(admin.ModelAdmin):
     list_filter = ['course', 'timeaccess']
     search_fields = ['user__username', 'user__lastname', 'course__shortname']
     date_hierarchy = 'timeaccess'
+
+
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    list_display = ['name', 'shortname']
+    list_filter = ['shortname']
+    search_fields = ['name']
+
+
+@admin.register(RoleAssignment)
+class RoleAssignmentAdmin(admin.ModelAdmin):
+    list_display = ['user', 'role', 'course', 'timecreated']
+    list_filter = ['role', 'course', 'timecreated']
+    search_fields = ['user__username', 'user__lastname', 'role__name', 'course__shortname']
+    date_hierarchy = 'timecreated'
