@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block title %}Patrones de Engagement Temporal - Romanova{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>⏰ Patrones de Engagement Temporal</h2>
+    <p class="subtitle">¿Cuándo estudian realmente los estudiantes? Análisis de horarios y días (últimos {{ days_analyzed }} días)</p>
+
+    <!-- Resumen Global -->
+    <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 30px;">
+        <h3 style="margin-top: 0; color: white;">📊 Resumen de Actividad</h3>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px;">
+            <div style="text-align: center;">
+                <div style="font-size: 36px; font-weight: bold;">{{ total_accesses|default:"0" }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">Total de Accesos</div>
+            </div>
+            {% if peak_time_slot %}
+            <div style="text-align: center;">
+                <div style="font-size: 20px; font-weight: bold;">{{ peak_time_slot.slot }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">Franja Horaria Peak</div>
+            </div>
+            {% endif %}
+            {% if peak_weekday %}
+            <div style="text-align: center;">
+                <div style="font-size: 28px; font-weight: bold;">{{ peak_weekday.day }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">Día más Activo</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Patrones por Franja Horaria -->
+    {% if time_slots %}
+    <div class="card" style="margin-bottom: 30px;">
+        <h3>🕐 Distribución por Franja Horaria</h3>
+        <p style="color: #6b7280; margin-bottom: 20px;">Identifica cuándo se concentra la mayor actividad estudiantil</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Franja Horaria</th>
+                    <th>Cantidad de Accesos</th>
+                    <th>Porcentaje (%)</th>
+                    <th>Visualización</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for slot in time_slots %}
+                <tr>
+                    <td><strong>{{ slot.slot }}</strong></td>
+                    <td>{{ slot.count }}</td>
+                    <td>{{ slot.percentage }}%</td>
+                    <td>
+                        <div style="width: {{ slot.percentage|floatformat:0 }}%; height: 24px; background: linear-gradient(90deg, #3b82f6, #8b5cf6); border-radius: 4px; min-width: 20px;"></div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Patrones por Día de Semana -->
+    {% if weekday_patterns %}
+    <div class="card" style="margin-bottom: 30px;">
+        <h3>📅 Actividad por Día de la Semana</h3>
+        <p style="color: #6b7280; margin-bottom: 20px;">Compara actividad entre días laborables y fines de semana</p>
+
+        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 15px; margin-bottom: 20px;">
+            {% for day in weekday_patterns %}
+            <div style="text-align: center; padding: 15px; border-radius: 10px; background: {% if day.day == 'Sábado' or day.day == 'Domingo' %}#fef3c7{% else %}#dbeafe{% endif %};">
+                <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">{{ day.day }}</div>
+                <div style="font-size: 24px; font-weight: bold; color: #111827;">{{ day.count }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Patrones por Carrera -->
+    {% if career_patterns %}
+    <div class="card">
+        <h3>🎓 Patrones de Estudio por Carrera</h3>
+        <p style="color: #6b7280; margin-bottom: 20px;">Cada carrera tiene horarios de estudio preferidos diferentes</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Carrera</th>
+                    <th>Mañana (6-12h)</th>
+                    <th>Tarde (12-18h)</th>
+                    <th>Noche (18-24h)</th>
+                    <th>Total Accesos</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for career in career_patterns %}
+                <tr>
+                    <td><strong>{{ career.career }}</strong></td>
+                    <td>
+                        <span style="color: #f59e0b; font-weight: 600;">{{ career.morning_pct }}%</span>
+                        <div style="width: {{ career.morning_pct|floatformat:0 }}%; height: 8px; background: #fbbf24; border-radius: 4px; margin-top: 4px;"></div>
+                    </td>
+                    <td>
+                        <span style="color: #3b82f6; font-weight: 600;">{{ career.afternoon_pct }}%</span>
+                        <div style="width: {{ career.afternoon_pct|floatformat:0 }}%; height: 8px; background: #60a5fa; border-radius: 4px; margin-top: 4px;"></div>
+                    </td>
+                    <td>
+                        <span style="color: #8b5cf6; font-weight: 600;">{{ career.night_pct }}%</span>
+                        <div style="width: {{ career.night_pct|floatformat:0 }}%; height: 8px; background: #a78bfa; border-radius: 4px; margin-top: 4px;"></div>
+                    </td>
+                    <td>{{ career.total_accesses }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Insights y Recomendaciones -->
+    <div class="card" style="margin-top: 30px; background: #f0fdf4;">
+        <h3 style="color: #065f46;">💡 Insights y Recomendaciones Estratégicas</h3>
+        <div style="color: #047857; line-height: 1.8;">
+            <p><strong>¿Cómo usar esta información?</strong></p>
+
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #10b981;">
+                <strong>📚 Para Profesores:</strong>
+                <ul style="margin-top: 10px;">
+                    <li>Publica contenido nuevo en las franjas de mayor actividad</li>
+                    <li>Programa evaluaciones y deadlines considerando los horarios peak</li>
+                    <li>Ofrece tutorías en horarios de alta concurrencia</li>
+                </ul>
+            </div>
+
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #7c3aed;">
+                <strong>🏢 Para Gestión Institucional:</strong>
+                <ul style="margin-top: 10px;">
+                    <li>Optimiza recursos de infraestructura (servidores, ancho de banda) según horarios peak</li>
+                    <li>Ajusta horarios de mantenimiento de plataforma en franjas de menor actividad</li>
+                    <li>Personaliza campañas de comunicación según patrones de cada carrera</li>
+                </ul>
+            </div>
+
+            <div style="background: white; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #f59e0b;">
+                <strong>⚠️ Alertas:</strong>
+                <ul style="margin-top: 10px;">
+                    <li>Actividad en madrugada (00-06h) puede indicar problemas de procrastinación</li>
+                    <li>Baja actividad los fines de semana puede ser normal, pero monitorea tendencias</li>
+                    <li>Carreras con >60% noche sugieren estudiantes que trabajan de día</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <a href="{% url 'analytics_menu' %}" class="button">← Volver al menú de estadísticas</a>
+    </div>
+</div>
+{% endblock %}

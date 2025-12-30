@@ -17,7 +17,7 @@
 
 ### *Transform your Moodle data into actionable insights*
 
-Comprehensive Django-based platform for analyzing, visualizing, and managing Moodle LMS data with **12 statistical analysis modules** including **6 advanced Machine Learning algorithms**.
+Comprehensive Django-based platform for analyzing, visualizing, and managing Moodle LMS data with **18 statistical analysis modules** including **6 advanced Machine Learning** and **6 Strategic Management** modules.
 
 [Get Started](#-quick-start) · [Features](#-key-features) · [ML Modules](#-machine-learning-modules)
 
@@ -29,10 +29,11 @@ Comprehensive Django-based platform for analyzing, visualizing, and managing Moo
 
 **Romanova Platform** is a comprehensive Django-based web application designed to **analyze, visualize, and manage Moodle LMS data** at scale. Born from the need to migrate and modernize a legacy PHP system, it combines enterprise-grade architecture with cutting-edge machine learning to deliver:
 
-- 📊 **12 Statistical Analysis Modules** - 6 basic + 6 advanced ML-powered
+- 📊 **18 Statistical Analysis Modules** - 6 basic + 6 ML + 6 strategic management
+- 💼 **Executive Insights** - Churn prediction, teacher efficiency, ROI by career
 - 📈 **Real-Time Reporting** - Weekly access reports with engagement tracking
 - 🎓 **Scalable Data Management** - Handle 3,200+ users and 200+ courses efficiently
-- 🤖 **Machine Learning** - Predictive analytics, clustering, PCA, and more
+- 🤖 **Machine Learning** - Random Forest, K-Means, PCA, Linear Regression
 - 🐳 **Modern Stack** - Fully Dockerized PostgreSQL + Django deployment
 - 🔒 **Enterprise Security** - CSRF protection, SQL injection prevention, secure sessions
 
@@ -86,6 +87,37 @@ Comprehensive Django-based platform for analyzing, visualizing, and managing Moo
 
 - **PCA Analysis**
   Principal Component Analysis for dimensional reduction
+
+</td>
+</tr>
+</table>
+
+### 💼 Strategic Management & Executive Insights
+
+<table>
+<tr>
+<td width="50%">
+
+- **Churn Prediction (🎯)**
+  Random Forest ML to predict student dropout risk with 90-day historical data
+
+- **Teacher Efficiency Ranking (⭐)**
+  Comparative performance metrics: engagement rate, retention, efficiency scores
+
+- **Cohort Value Analysis (💰)**
+  ROI by student generation with quarterly tracking and retention analysis
+
+</td>
+<td width="50%">
+
+- **Engagement Patterns (⏰)**
+  When students actually study: time slots, weekdays, patterns by career
+
+- **Course Network Analysis (🔗)**
+  Co-occurrence matrix: which courses students take together
+
+- **Career ROI Analysis (📊)**
+  Cost-benefit by program with investment vs estimated return metrics
 
 </td>
 </tr>
@@ -192,7 +224,7 @@ chmod +x init.sh
 
 ### 2️⃣ Statistical Analysis Menu
 
-Navigate to **http://localhost:8008/analytics** to access all 12 analysis modules:
+Navigate to **http://localhost:8008/analytics** to access all 18 analysis modules:
 
 #### 📊 Basic Analysis (6 modules)
 
@@ -215,6 +247,17 @@ Navigate to **http://localhost:8008/analytics** to access all 12 analysis module
 | **Survival Analysis** | `/analytics/survival/` | Retention and churn by cohorts | Cohort Analysis |
 | **Activity Heatmap** | `/analytics/heatmap/` | Day/hour temporal patterns | Frequency Distribution |
 | **PCA Analysis** | `/analytics/pca/` | Dimensional reduction | PCA (scikit-learn) |
+
+#### 💼 Strategic & Management Analysis (6 modules)
+
+| Module | URL | Description | Key Metrics |
+|--------|-----|-------------|-------------|
+| **Churn Prediction** | `/analytics/churn/` | Predict student dropout with Random Forest | Dropout probability, risk level, feature importance |
+| **Teacher Efficiency** | `/analytics/teachers/` | Rank professors by engagement & retention | Efficiency score, engagement rate, student activity |
+| **Cohort Value** | `/analytics/cohort/` | ROI by student generation (quarterly) | Cohort value, retention rate, avg accesses/courses |
+| **Engagement Patterns** | `/analytics/engagement/` | When students study (time/day patterns) | Time slots, weekday distribution, career patterns |
+| **Course Network** | `/analytics/network/` | Course co-occurrence analysis | Relationships, hub courses, connection strength |
+| **Career ROI** | `/analytics/roi/` | Cost-benefit analysis by program | ROI %, investment vs benefit, efficiency rating |
 
 ---
 
@@ -315,6 +358,197 @@ Reduces dimensional complexity:
 - Identify most important metrics
 - Simplify complex data
 - Find hidden patterns
+
+---
+
+## 💼 Strategic Management & Executive Insights Modules
+
+### 1. 🎯 Churn Prediction (Student Dropout Prediction)
+
+**Algorithm:** Random Forest Classifier (scikit-learn)
+**Period:** Last 90 days of activity data
+**Features:** 5 dimensions (total accesses, courses enrolled, groups, days since access, weekly accesses)
+
+Predicts which students are at risk of dropping out:
+- Trains Random Forest model with 50 trees
+- Calculates dropout probability for each student
+- Classifies risk levels: High (>70%), Medium (40-70%), Low (<40%)
+- Shows feature importance (which variables matter most)
+- Identifies top 30 at-risk students
+
+**Use Cases:**
+- Proactively contact students before they drop out
+- Allocate intervention resources efficiently
+- Understand which factors predict abandonment
+- Track retention improvement over time
+
+**Key Metrics:**
+- Churn probability percentage
+- Risk level classification
+- Days without access
+- Total historical accesses
+- Current status (Active/Inactive)
+
+---
+
+### 2. ⭐ Teacher Efficiency Ranking
+
+**Algorithm:** Statistical Aggregation & Composite Scoring
+**Period:** Last 60 days
+**Formula:** Efficiency Score = (Engagement Rate × 0.7) + (min(Avg Accesses, 50) × 0.6)
+
+Ranks professors by student engagement and retention:
+- Tracks students per professor
+- Calculates engagement rate (% active students)
+- Measures average accesses per student
+- Computes composite efficiency score
+- Generates 5-star ratings
+
+**Use Cases:**
+- Identify top-performing teachers for best practices sharing
+- Detect underperforming courses needing support
+- Inform professional development programs
+- Support promotion and evaluation decisions
+- Benchmark teaching effectiveness
+
+**Key Metrics:**
+- Engagement rate (% students with recent access)
+- Average accesses per student
+- Efficiency score (0-100+)
+- Star rating (⭐ to ⭐⭐⭐⭐⭐)
+- Number of courses and students
+
+---
+
+### 3. 💰 Cohort Value Analysis
+
+**Algorithm:** Cohort Retention & Value Scoring
+**Period:** Last 8 quarters (2 years)
+**Grouping:** By enrollment quarter (YYYY-Q1 format)
+
+Analyzes ROI by student generation:
+- Groups students by enrollment quarter
+- Tracks retention rate (% still active)
+- Calculates average accesses and courses per student
+- Computes cohort value score
+- Identifies best and worst cohorts
+
+**Value Formula:**
+`Cohort Value = (Avg Accesses × 0.4) + (Avg Courses × 10) + (Retention % × 0.5)`
+
+**Use Cases:**
+- Compare different student generations
+- Identify what makes successful cohorts
+- Detect declining trends early
+- Optimize enrollment strategies
+- Allocate resources to high-value cohorts
+
+**Key Metrics:**
+- Students count (enrolled vs active)
+- Retention rate percentage
+- Average accesses and courses per student
+- Cohort value score
+- Value rating (🟢 High, 🟡 Medium, 🔴 Low)
+
+---
+
+### 4. ⏰ Engagement Patterns (When Students Actually Study)
+
+**Algorithm:** Temporal Pattern Analysis
+**Period:** Last 90 days
+**Dimensions:** Time slots, weekdays, careers
+
+Reveals when students really study:
+- Analyzes activity by 6 time slots (dawn, morning, midday, afternoon, evening, late night)
+- Tracks patterns by day of week
+- Compares patterns across different careers
+- Identifies peak activity times
+- Shows morning/afternoon/night distribution by program
+
+**Use Cases:**
+- Schedule content releases at peak times
+- Plan maintenance during low-activity periods
+- Optimize infrastructure capacity by hour
+- Tailor communication timing by career
+- Detect problematic patterns (excessive late-night cramming)
+
+**Key Metrics:**
+- Access count by time slot (% distribution)
+- Daily activity by weekday
+- Career-specific patterns (morning/afternoon/night %)
+- Peak time slot identification
+- Most active weekday
+
+---
+
+### 5. 🔗 Course Network Analysis (Co-occurrence Matrix)
+
+**Algorithm:** Network Analysis & Co-occurrence
+**Minimum:** 3 students in common
+**Metric:** Relationship strength (% overlap)
+
+Discovers which courses students take together:
+- Builds co-occurrence matrix of course pairs
+- Calculates relationship strength
+- Identifies "hub" courses (most connections)
+- Classifies relationships: Strong (>50%), Medium (25-50%), Weak (<25%)
+- Shows top 30 course pairs
+
+**Strength Formula:**
+`Strength = (Students in Common / Max Enrolled Either Course) × 100`
+
+**Use Cases:**
+- Coordinate content between related courses
+- Create course packages for easier enrollment
+- Recommend courses to students
+- Detect missing prerequisite relationships
+- Optimize class scheduling to avoid conflicts
+
+**Key Metrics:**
+- Students in common between course pairs
+- Relationship strength percentage
+- Hub course connection count
+- Relationship type (Fuerte/Media/Débil)
+- Total relationships detected
+
+---
+
+### 6. 📊 Career ROI Analysis (Educational Investment Return)
+
+**Algorithm:** Cost-Benefit Analysis
+**Cost Model:** $5,000 per course (configurable)
+**Benefit Model:** Students × Avg Accesses × Retention Rate × 100
+
+Analyzes educational ROI by academic program:
+- Calculates total investment (courses × cost)
+- Estimates educational benefit based on engagement
+- Computes ROI percentage
+- Ranks careers by efficiency
+- Identifies best and worst performers
+
+**ROI Formula:**
+`ROI = ((Benefit - Cost) / Cost) × 100`
+
+**Use Cases:**
+- Inform budget allocation decisions
+- Identify programs needing optimization
+- Justify investment to stakeholders
+- Compare program efficiency
+- Strategic planning for new programs
+
+**Key Metrics:**
+- Total investment and estimated benefit
+- ROI percentage
+- Retention rate by career
+- Average accesses per student
+- Efficiency rating (High/Medium/Low)
+- Cost per student
+
+**Rating System:**
+- 🟢 Excellent: ROI > 100%
+- 🟡 Good: ROI 50-100%
+- 🟠 Regular: ROI 0-50%
+- 🔴 Deficit: ROI < 0%
 
 ---
 
@@ -610,7 +844,7 @@ MIT License - Copyright (c) 2025 Carlos Dagorret
 
 ### *Transforma tus datos de Moodle en insights accionables*
 
-Plataforma integral basada en Django para analizar, visualizar y gestionar datos de Moodle LMS con **12 módulos de análisis estadístico** incluyendo **6 algoritmos avanzados de Machine Learning**.
+Plataforma integral basada en Django para analizar, visualizar y gestionar datos de Moodle LMS con **18 módulos de análisis estadístico** incluyendo **6 algoritmos avanzados de Machine Learning** y **6 módulos de Gestión Estratégica**.
 
 [Comenzar](#-inicio-rápido) · [Características](#-características-principales) · [Módulos ML](#-módulos-de-machine-learning)
 

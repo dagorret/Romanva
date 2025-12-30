@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+
+{% block title %}Eficiencia Docente Comparativa - Romanova{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>⭐ Análisis de Eficiencia Docente Comparativa</h2>
+    <p class="subtitle">Ranking de profesores por engagement estudiantil y retención (últimos 60 días)</p>
+
+    <!-- KPIs Globales -->
+    <div class="card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; margin-bottom: 30px;">
+        <h3 style="margin-top: 0; color: white;">📊 Indicadores Globales</h3>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px;">
+            <div style="text-align: center;">
+                <div style="font-size: 36px; font-weight: bold;">{{ total_teachers }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">Profesores Evaluados</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 36px; font-weight: bold;">{{ avg_engagement_rate }}%</div>
+                <div style="font-size: 14px; opacity: 0.9;">Engagement Promedio</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 36px; font-weight: bold;">{{ avg_efficiency_score }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">Score Eficiencia Promedio</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Performer -->
+    {% if top_performer %}
+    <div class="card" style="border: 3px solid #10b981; margin-bottom: 30px;">
+        <h3 style="color: #10b981;">🏆 Profesor Destacado del Mes</h3>
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 20px; align-items: center; padding: 20px; background: #ecfdf5; border-radius: 8px;">
+            <div>
+                <h4 style="margin: 0; color: #111827;">{{ top_performer.teacher.fullname }}</h4>
+                <p style="margin: 5px 0 0 0; color: #6b7280;">{{ top_performer.courses_count }} cursos | {{ top_performer.total_students }} estudiantes</p>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #10b981;">{{ top_performer.engagement_rate }}%</div>
+                <div style="font-size: 12px; color: #6b7280;">Engagement</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #7c3aed;">{{ top_performer.efficiency_score }}</div>
+                <div style="font-size: 12px; color: #6b7280;">Score Eficiencia</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 28px;">{{ top_performer.rating }}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Ranking de Profesores -->
+    {% if teachers %}
+    <div class="card">
+        <h3>📊 Ranking Completo de Eficiencia Docente</h3>
+        <p style="color: #6b7280; margin-bottom: 20px;">
+            Score de eficiencia = (Tasa Engagement × 0.7) + (min(Accesos Promedio, 50) × 0.6)
+        </p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Profesor</th>
+                    <th>Cursos</th>
+                    <th>Estudiantes</th>
+                    <th>Activos</th>
+                    <th>Engagement (%)</th>
+                    <th>Accesos/Estudiante</th>
+                    <th>Score Eficiencia</th>
+                    <th>Rating</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for teacher in teachers %}
+                <tr style="{% if forloop.counter0 < 3 %}background: #f0fdf4;{% endif %}">
+                    <td>
+                        <strong style="{% if forloop.counter0 == 0 %}color: #fbbf24; font-size: 18px;{% elif forloop.counter0 == 1 %}color: #94a3b8; font-size: 16px;{% elif forloop.counter0 == 2 %}color: #cd7f32; font-size: 16px;{% endif %}">
+                            #{{ forloop.counter }}
+                        </strong>
+                    </td>
+                    <td><strong>{{ teacher.teacher.fullname }}</strong></td>
+                    <td>{{ teacher.courses_count }}</td>
+                    <td>{{ teacher.total_students }}</td>
+                    <td>{{ teacher.active_students }}</td>
+                    <td>
+                        <span style="font-weight: 600; color: {% if teacher.engagement_rate > 70 %}#10b981{% elif teacher.engagement_rate > 40 %}#f59e0b{% else %}#ef4444{% endif %}">
+                            {{ teacher.engagement_rate }}%
+                        </span>
+                    </td>
+                    <td>{{ teacher.avg_accesses_per_student }}</td>
+                    <td>
+                        <strong style="font-size: 16px; color: #7c3aed;">{{ teacher.efficiency_score }}</strong>
+                    </td>
+                    <td>{{ teacher.rating }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert">
+        <p>No se encontraron profesores con cursos activos en el período analizado.</p>
+    </div>
+    {% endif %}
+
+    <!-- Interpretación y Recomendaciones -->
+    <div class="card" style="margin-top: 30px; background: #fef3c7;">
+        <h3>💡 Interpretación y Recomendaciones</h3>
+        <div style="color: #78350f; line-height: 1.8;">
+            <p><strong>Tasa de Engagement:</strong> Porcentaje de estudiantes que accedieron al menos una vez en últimos 60 días.</p>
+            <p><strong>Accesos Promedio:</strong> Total de accesos dividido por cantidad de estudiantes inscriptos.</p>
+            <p><strong>Score de Eficiencia:</strong> Métrica combinada que pondera engagement (70%) y frecuencia de acceso (60%).</p>
+
+            <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 8px;">
+                <strong>🎯 Acciones Recomendadas:</strong>
+                <ul style="margin-top: 10px;">
+                    <li>Profesores con score > 80: Compartir mejores prácticas con el equipo</li>
+                    <li>Profesores con engagement < 40%: Ofrecer capacitación en herramientas digitales</li>
+                    <li>Cursos con pocos accesos: Revisar contenido y dinámica de clases</li>
+                    <li>Establecer metas trimestrales de engagement mínimo (ej: 60%)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <a href="{% url 'analytics_menu' %}" class="button">← Volver al menú de estadísticas</a>
+    </div>
+</div>
+{% endblock %}

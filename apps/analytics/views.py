@@ -105,7 +105,54 @@ def analytics_menu(request):
                 'icon': '🧬',
                 'category': 'advanced'
             },
-        ]
+            # Análisis Estratégicos y Gerenciales
+            {
+                'name': 'Predicción de Abandono',
+                'description': 'ML: Random Forest para predecir estudiantes en riesgo de abandono',
+                'url': 'churn_prediction',
+                'icon': '🎯',
+                'category': 'strategic'
+            },
+            {
+                'name': 'Eficiencia Docente',
+                'description': 'Ranking de profesores por engagement y retención estudiantil',
+                'url': 'teacher_efficiency',
+                'icon': '⭐',
+                'category': 'strategic'
+            },
+            {
+                'name': 'Valor de Cohorte',
+                'description': 'ROI por generación de estudiantes (análisis trimestral)',
+                'url': 'cohort_value',
+                'icon': '💰',
+                'category': 'strategic'
+            },
+            {
+                'name': 'Patrones de Engagement',
+                'description': 'Cuándo estudian: horarios, días, franjas por carrera',
+                'url': 'engagement_patterns',
+                'icon': '⏰',
+                'category': 'strategic'
+            },
+            {
+                'name': 'Red de Cursos',
+                'description': 'Qué cursos toman juntos los estudiantes (network analysis)',
+                'url': 'course_network',
+                'icon': '🔗',
+                'category': 'strategic'
+            },
+            {
+                'name': 'ROI por Carrera',
+                'description': 'Análisis costo-beneficio educativo por carrera',
+                'url': 'career_roi',
+                'icon': '📊',
+                'category': 'strategic'
+            },
+        ],
+        'total_courses': Course.objects.filter(visible=True).count(),
+        'total_users': MoodleUser.objects.count(),
+        'total_groups': Group.objects.count(),
+        'total_accesses': UserLastAccess.objects.count(),
     }
     return render(request, 'analytics/menu.html', context)
 
@@ -814,3 +861,584 @@ def pca_analysis(request):
         'n_components': len(variance_info),
     }
     return render(request, 'analytics/pca_analysis.html', context)
+
+
+# ============================================================================
+# ANÁLISIS ESTRATÉGICOS Y GERENCIALES
+# ============================================================================
+
+@login_required
+def churn_prediction(request):
+    """Predicción de abandono estudiantil con Random Forest"""
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.preprocessing import StandardScaler
+    import numpy as np
+
+    # Definir abandono: sin acceso en últimos 30 días
+    activity_threshold = timezone.now() - timedelta(days=30)
+    older_threshold = timezone.now() - timedelta(days=90)
+
+    # Construir dataset
+    students_data = []
+    students_info = []
+
+    for user in MoodleUser.objects.all()[:500]:
+        # Características históricas (90 días previos)
+        total_accesses = UserLastAccess.objects.filter(
+            user=user,
+            timeaccess__gte=older_threshold
+        ).count()
+
+        courses_enrolled = UserEnrolment.objects.filter(user=user).count()
+        groups_count = GroupMember.objects.filter(user=user).count()
+
+        # Calcular días desde última actividad
+        last_access = UserLastAccess.objects.filter(user=user).order_by('-timeaccess').first()
+        if last_access:
+            days_since_access = (timezone.now() - last_access.timeaccess).days
+        else:
+            days_since_access = 999
+
+        # Promedio de accesos semanales
+        weeks_active = 13  # 90 días / 7
+        avg_weekly_accesses = total_accesses / weeks_active if weeks_active > 0 else 0
+
+        # Label: churned (1) o activo (0)
+        recent_access = UserLastAccess.objects.filter(
+            user=user,
+            timeaccess__gte=activity_threshold
+        ).exists()
+
+        is_churned = 0 if recent_access else 1
+
+        if total_accesses > 0:  # Solo usuarios con historial
+            students_data.append([
+                total_accesses,
+                courses_enrolled,
+                groups_count,
+                days_since_access,
+                avg_weekly_accesses
+            ])
+            students_info.append({
+                'user': user,
+                'total_accesses': total_accesses,
+                'courses_enrolled': courses_enrolled,
+                'days_since_access': days_since_access,
+                'is_churned': is_churned,
+            })
+
+    predictions = []
+    feature_importance = []
+
+    if len(students_data) >= 10:
+        # Preparar datos
+        X = np.array(students_data)
+        y = np.array([s['is_churned'] for s in students_info])
+
+        # Normalizar
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+
+        # Entrenar Random Forest
+        rf = RandomForestClassifier(n_estimators=50, random_state=42, max_depth=5)
+        rf.fit(X_scaled, y)
+
+        # Predecir probabilidades
+        probs = rf.predict_proba(X_scaled)
+
+        # Feature importance
+        features = ['Accesos Totales', 'Cursos', 'Grupos', 'Días Sin Acceso', 'Accesos Semanales']
+        importance = rf.feature_importances_
+        feature_importance = [
+            {'feature': features[i], 'importance': round(importance[i] * 100, 2)}
+            for i in range(len(features))
+        ]
+        feature_importance.sort(key=lambda x: x['importance'], reverse=True)
+
+        # Top estudiantes en riesgo
+        for i, student in enumerate(students_info):
+            churn_prob = probs[i][1] * 100  # Probabilidad de abandono
+
+            predictions.append({
+                'user': student['user'],
+                'churn_probability': round(churn_prob, 2),
+                'risk_level': 'Alto' if churn_prob > 70 else 'Medio' if churn_prob > 40 else 'Bajo',
+                'days_since_access': student['days_since_access'],
+                'total_accesses': student['total_accesses'],
+                'actual_status': 'Inactivo' if student['is_churned'] else 'Activo'
+            })
+
+        # Ordenar por probabilidad de abandono
+        predictions.sort(key=lambda x: x['churn_probability'], reverse=True)
+
+    # Estadísticas globales
+    total_students = len(students_info)
+    churned_students = sum(1 for s in students_info if s['is_churned'])
+    active_students = total_students - churned_students
+    churn_rate = (churned_students / total_students * 100) if total_students > 0 else 0
+
+    context = {
+        'predictions': predictions[:30],  # Top 30 en riesgo
+        'feature_importance': feature_importance,
+        'total_students': total_students,
+        'active_students': active_students,
+        'churned_students': churned_students,
+        'churn_rate': round(churn_rate, 2),
+        'high_risk_count': sum(1 for p in predictions if p['churn_probability'] > 70),
+    }
+    return render(request, 'analytics/churn_prediction.html', context)
+
+
+@login_required
+def teacher_efficiency(request):
+    """Análisis de eficiencia docente comparativa"""
+    from collections import defaultdict
+
+    # Obtener profesores (rol teacher o editingteacher)
+    teacher_roles = Role.objects.filter(shortname__in=['teacher', 'editingteacher'])
+
+    teacher_stats = []
+
+    for teacher_role in teacher_roles:
+        # Obtener asignaciones de profesores
+        assignments = RoleAssignment.objects.filter(role=teacher_role).select_related('user', 'course')
+
+        teacher_data = defaultdict(lambda: {
+            'courses': set(),
+            'total_students': 0,
+            'total_accesses': 0,
+            'active_students': 0,
+        })
+
+        for assignment in assignments:
+            teacher = assignment.user
+            course = assignment.course
+
+            if course:
+                teacher_data[teacher.id]['user'] = teacher
+                teacher_data[teacher.id]['courses'].add(course)
+
+                # Estudiantes en el curso
+                students = UserEnrolment.objects.filter(enrol__course=course).count()
+                teacher_data[teacher.id]['total_students'] += students
+
+                # Accesos de estudiantes en últimos 60 días
+                date_limit = timezone.now() - timedelta(days=60)
+                accesses = UserLastAccess.objects.filter(
+                    course=course,
+                    timeaccess__gte=date_limit
+                ).count()
+                teacher_data[teacher.id]['total_accesses'] += accesses
+
+                # Estudiantes activos (con acceso reciente)
+                active = UserLastAccess.objects.filter(
+                    course=course,
+                    timeaccess__gte=date_limit
+                ).values('user').distinct().count()
+                teacher_data[teacher.id]['active_students'] += active
+
+        # Calcular métricas
+        for teacher_id, data in teacher_data.items():
+            courses_count = len(data['courses'])
+            total_students = data['total_students']
+            total_accesses = data['total_accesses']
+            active_students = data['active_students']
+
+            # Tasa de engagement
+            engagement_rate = (active_students / total_students * 100) if total_students > 0 else 0
+
+            # Accesos promedio por estudiante
+            avg_accesses = (total_accesses / total_students) if total_students > 0 else 0
+
+            # Score de eficiencia (combinación de engagement y accesos)
+            efficiency_score = (engagement_rate * 0.7) + (min(avg_accesses, 50) * 0.6)
+
+            teacher_stats.append({
+                'teacher': data['user'],
+                'courses_count': courses_count,
+                'total_students': total_students,
+                'active_students': active_students,
+                'engagement_rate': round(engagement_rate, 2),
+                'total_accesses': total_accesses,
+                'avg_accesses_per_student': round(avg_accesses, 2),
+                'efficiency_score': round(efficiency_score, 2),
+                'rating': '⭐⭐⭐⭐⭐' if efficiency_score > 80 else '⭐⭐⭐⭐' if efficiency_score > 60 else '⭐⭐⭐' if efficiency_score > 40 else '⭐⭐'
+            })
+
+    # Ordenar por score de eficiencia
+    teacher_stats.sort(key=lambda x: x['efficiency_score'], reverse=True)
+
+    # Promedios globales
+    if teacher_stats:
+        avg_engagement = sum(t['engagement_rate'] for t in teacher_stats) / len(teacher_stats)
+        avg_efficiency = sum(t['efficiency_score'] for t in teacher_stats) / len(teacher_stats)
+    else:
+        avg_engagement = 0
+        avg_efficiency = 0
+
+    context = {
+        'teachers': teacher_stats,
+        'total_teachers': len(teacher_stats),
+        'avg_engagement_rate': round(avg_engagement, 2),
+        'avg_efficiency_score': round(avg_efficiency, 2),
+        'top_performer': teacher_stats[0] if teacher_stats else None,
+    }
+    return render(request, 'analytics/teacher_efficiency.html', context)
+
+
+@login_required
+def cohort_value(request):
+    """Análisis de valor de cohorte - ROI por generación"""
+    from collections import defaultdict
+
+    # Agrupar por cohorte (trimestre de inscripción)
+    cohorts = defaultdict(lambda: {
+        'students': set(),
+        'total_accesses': 0,
+        'total_courses': 0,
+        'active_count': 0,
+    })
+
+    enrollments = UserEnrolment.objects.all().select_related('user', 'enrol__course')
+
+    for enrollment in enrollments:
+        # Determinar cohorte (año-trimestre)
+        year = enrollment.timecreated.year
+        quarter = (enrollment.timecreated.month - 1) // 3 + 1
+        cohort_key = f"{year}-Q{quarter}"
+
+        cohorts[cohort_key]['students'].add(enrollment.user.id)
+        cohorts[cohort_key]['total_courses'] += 1
+
+        # Accesos del estudiante
+        accesses = UserLastAccess.objects.filter(
+            user=enrollment.user,
+            course=enrollment.enrol.course
+        ).count()
+        cohorts[cohort_key]['total_accesses'] += accesses
+
+        # Verificar si está activo (acceso en últimos 30 días)
+        recent = UserLastAccess.objects.filter(
+            user=enrollment.user,
+            timeaccess__gte=timezone.now() - timedelta(days=30)
+        ).exists()
+
+        if recent:
+            cohorts[cohort_key]['active_count'] += 1
+
+    # Calcular métricas de valor
+    cohort_stats = []
+    for cohort_key, data in sorted(cohorts.items(), reverse=True)[:8]:  # Últimos 8 trimestres
+        students_count = len(data['students'])
+        total_accesses = data['total_accesses']
+        total_courses = data['total_courses']
+        active_count = data['active_count']
+
+        # Métricas de valor
+        avg_accesses_per_student = total_accesses / students_count if students_count > 0 else 0
+        avg_courses_per_student = total_courses / students_count if students_count > 0 else 0
+        retention_rate = (active_count / students_count * 100) if students_count > 0 else 0
+
+        # Valor de cohorte (métrica combinada)
+        cohort_value = (avg_accesses_per_student * 0.4) + (avg_courses_per_student * 10) + (retention_rate * 0.5)
+
+        cohort_stats.append({
+            'cohort': cohort_key,
+            'students_count': students_count,
+            'active_count': active_count,
+            'retention_rate': round(retention_rate, 2),
+            'total_accesses': total_accesses,
+            'avg_accesses': round(avg_accesses_per_student, 2),
+            'total_courses': total_courses,
+            'avg_courses': round(avg_courses_per_student, 2),
+            'cohort_value': round(cohort_value, 2),
+            'value_rating': '🟢 Alto' if cohort_value > 100 else '🟡 Medio' if cohort_value > 50 else '🔴 Bajo'
+        })
+
+    # Mejor y peor cohorte
+    if cohort_stats:
+        cohort_stats.sort(key=lambda x: x['cohort_value'], reverse=True)
+        best_cohort = cohort_stats[0]
+        worst_cohort = cohort_stats[-1]
+    else:
+        best_cohort = None
+        worst_cohort = None
+
+    context = {
+        'cohorts': cohort_stats,
+        'total_cohorts': len(cohort_stats),
+        'best_cohort': best_cohort,
+        'worst_cohort': worst_cohort,
+    }
+    return render(request, 'analytics/cohort_value.html', context)
+
+
+@login_required
+def engagement_patterns(request):
+    """Patrones de engagement temporal - Cuándo estudian realmente"""
+    from collections import defaultdict
+
+    # Analizar últimos 90 días
+    date_limit = timezone.now() - timedelta(days=90)
+    accesses = UserLastAccess.objects.filter(timeaccess__gte=date_limit)
+
+    # Patrones por franja horaria
+    time_slots = {
+        'Madrugada (00-06)': 0,
+        'Mañana (06-12)': 0,
+        'Mediodía (12-14)': 0,
+        'Tarde (14-18)': 0,
+        'Noche (18-22)': 0,
+        'Noche Tardía (22-24)': 0,
+    }
+
+    # Patrones por día de semana
+    weekday_patterns = defaultdict(int)
+
+    # Patrones por carrera
+    career_patterns = defaultdict(lambda: defaultdict(int))
+
+    for access in accesses:
+        hour = access.timeaccess.hour
+        weekday = access.timeaccess.weekday()
+
+        # Clasificar por franja horaria
+        if 0 <= hour < 6:
+            time_slots['Madrugada (00-06)'] += 1
+        elif 6 <= hour < 12:
+            time_slots['Mañana (06-12)'] += 1
+        elif 12 <= hour < 14:
+            time_slots['Mediodía (12-14)'] += 1
+        elif 14 <= hour < 18:
+            time_slots['Tarde (14-18)'] += 1
+        elif 18 <= hour < 22:
+            time_slots['Noche (18-22)'] += 1
+        else:
+            time_slots['Noche Tardía (22-24)'] += 1
+
+        # Día de semana
+        days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+        weekday_patterns[days[weekday]] += 1
+
+        # Por carrera (categoría del curso)
+        if access.course.category:
+            career = access.course.category.name
+            if hour < 12:
+                career_patterns[career]['morning'] += 1
+            elif hour < 18:
+                career_patterns[career]['afternoon'] += 1
+            else:
+                career_patterns[career]['night'] += 1
+
+    # Convertir a listas para template
+    time_slot_data = [
+        {'slot': slot, 'count': count, 'percentage': round(count / len(accesses) * 100, 2) if len(accesses) > 0 else 0}
+        for slot, count in time_slots.items()
+    ]
+
+    weekday_data = [
+        {'day': day, 'count': count}
+        for day, count in weekday_patterns.items()
+    ]
+
+    career_data = []
+    for career, periods in career_patterns.items():
+        total = sum(periods.values())
+        career_data.append({
+            'career': career,
+            'morning_pct': round(periods['morning'] / total * 100, 2) if total > 0 else 0,
+            'afternoon_pct': round(periods['afternoon'] / total * 100, 2) if total > 0 else 0,
+            'night_pct': round(periods['night'] / total * 100, 2) if total > 0 else 0,
+            'total_accesses': total,
+        })
+
+    # Insights automáticos
+    peak_slot = max(time_slot_data, key=lambda x: x['count'])
+    peak_day = max(weekday_data, key=lambda x: x['count']) if weekday_data else None
+
+    context = {
+        'time_slots': time_slot_data,
+        'weekday_patterns': weekday_data,
+        'career_patterns': career_data,
+        'peak_time_slot': peak_slot,
+        'peak_weekday': peak_day,
+        'total_accesses': len(accesses),
+        'days_analyzed': 90,
+    }
+    return render(request, 'analytics/engagement_patterns.html', context)
+
+
+@login_required
+def course_network(request):
+    """Red de cursos relacionados - Qué cursos toman juntos los estudiantes"""
+    from collections import defaultdict
+
+    # Construir matriz de co-ocurrencia
+    course_pairs = defaultdict(int)
+    course_info = {}
+
+    # Obtener estudiantes y sus cursos
+    students = MoodleUser.objects.all()[:300]  # Limitar para performance
+
+    for student in students:
+        # Cursos en los que está inscrito
+        enrollments = UserEnrolment.objects.filter(user=student).select_related('enrol__course')
+        student_courses = [e.enrol.course for e in enrollments if e.enrol.course.visible]
+
+        # Crear pares de cursos
+        for i, course1 in enumerate(student_courses):
+            course_info[course1.id] = course1
+
+            for course2 in student_courses[i+1:]:
+                # Ordenar para evitar duplicados (A,B) y (B,A)
+                pair = tuple(sorted([course1.id, course2.id]))
+                course_pairs[pair] += 1
+
+    # Convertir a lista ordenada
+    network_data = []
+    for (course1_id, course2_id), count in course_pairs.items():
+        if count >= 3:  # Mínimo 3 estudiantes en común
+            course1 = course_info.get(course1_id)
+            course2 = course_info.get(course2_id)
+
+            if course1 and course2:
+                # Calcular strength (normalizado)
+                max_enrolled = max(
+                    UserEnrolment.objects.filter(enrol__course=course1).count(),
+                    UserEnrolment.objects.filter(enrol__course=course2).count()
+                )
+                strength = (count / max_enrolled * 100) if max_enrolled > 0 else 0
+
+                network_data.append({
+                    'course1': course1,
+                    'course2': course2,
+                    'students_in_common': count,
+                    'strength': round(strength, 2),
+                    'relationship': 'Fuerte' if strength > 50 else 'Media' if strength > 25 else 'Débil'
+                })
+
+    # Ordenar por estudiantes en común
+    network_data.sort(key=lambda x: x['students_in_common'], reverse=True)
+
+    # Encontrar cursos "hub" (más conexiones)
+    course_connections = defaultdict(int)
+    for item in network_data:
+        course_connections[item['course1'].id] += 1
+        course_connections[item['course2'].id] += 1
+
+    hub_courses = []
+    for course_id, connections in sorted(course_connections.items(), key=lambda x: x[1], reverse=True)[:10]:
+        course = course_info.get(course_id)
+        if course:
+            hub_courses.append({
+                'course': course,
+                'connections': connections,
+                'popularity': '⭐⭐⭐⭐⭐' if connections > 20 else '⭐⭐⭐⭐' if connections > 10 else '⭐⭐⭐'
+            })
+
+    context = {
+        'network_relationships': network_data[:30],  # Top 30
+        'hub_courses': hub_courses,
+        'total_relationships': len(network_data),
+        'total_students_analyzed': students.count(),
+    }
+    return render(request, 'analytics/course_network.html', context)
+
+
+@login_required
+def career_roi(request):
+    """ROI Educativo por Carrera - Costos vs Beneficios"""
+    from collections import defaultdict
+
+    # Analizar por categoría (carrera)
+    categories = Category.objects.filter(depth=2)  # Nivel de carreras
+
+    career_stats = []
+
+    for category in categories:
+        # Cursos de la carrera
+        courses = Course.objects.filter(category=category, visible=True)
+        courses_count = courses.count()
+
+        if courses_count == 0:
+            continue
+
+        # Estudiantes totales
+        total_students = UserEnrolment.objects.filter(
+            enrol__course__category=category
+        ).values('user').distinct().count()
+
+        # Accesos totales
+        total_accesses = UserLastAccess.objects.filter(
+            course__category=category
+        ).count()
+
+        # Estudiantes activos (últimos 30 días)
+        active_students = UserLastAccess.objects.filter(
+            course__category=category,
+            timeaccess__gte=timezone.now() - timedelta(days=30)
+        ).values('user').distinct().count()
+
+        # Tasa de retención
+        retention_rate = (active_students / total_students * 100) if total_students > 0 else 0
+
+        # Engagement promedio
+        avg_accesses = total_accesses / total_students if total_students > 0 else 0
+
+        # Costo estimado por curso (arbitrario para demo)
+        cost_per_course = 5000  # USD
+        total_cost = courses_count * cost_per_course
+
+        # Beneficio estimado (basado en engagement y retención)
+        # Fórmula: estudiantes * engagement * retención
+        estimated_benefit = total_students * avg_accesses * (retention_rate / 100) * 100
+
+        # ROI = (Beneficio - Costo) / Costo * 100
+        roi = ((estimated_benefit - total_cost) / total_cost * 100) if total_cost > 0 else 0
+
+        # Costo por estudiante
+        cost_per_student = total_cost / total_students if total_students > 0 else 0
+
+        career_stats.append({
+            'career': category.name,
+            'courses_count': courses_count,
+            'total_students': total_students,
+            'active_students': active_students,
+            'retention_rate': round(retention_rate, 2),
+            'total_accesses': total_accesses,
+            'avg_accesses': round(avg_accesses, 2),
+            'total_cost': total_cost,
+            'estimated_benefit': round(estimated_benefit, 2),
+            'roi': round(roi, 2),
+            'cost_per_student': round(cost_per_student, 2),
+            'roi_rating': '🟢 Excelente' if roi > 100 else '🟡 Bueno' if roi > 50 else '🟠 Regular' if roi > 0 else '🔴 Deficitario',
+            'efficiency': 'Alta' if retention_rate > 70 and avg_accesses > 10 else 'Media' if retention_rate > 40 else 'Baja'
+        })
+
+    # Ordenar por ROI
+    career_stats.sort(key=lambda x: x['roi'], reverse=True)
+
+    # Estadísticas globales
+    if career_stats:
+        total_investment = sum(c['total_cost'] for c in career_stats)
+        total_benefit = sum(c['estimated_benefit'] for c in career_stats)
+        global_roi = ((total_benefit - total_investment) / total_investment * 100) if total_investment > 0 else 0
+        best_career = career_stats[0]
+        worst_career = career_stats[-1]
+    else:
+        total_investment = 0
+        total_benefit = 0
+        global_roi = 0
+        best_career = None
+        worst_career = None
+
+    context = {
+        'careers': career_stats,
+        'total_careers': len(career_stats),
+        'total_investment': total_investment,
+        'total_benefit': round(total_benefit, 2),
+        'global_roi': round(global_roi, 2),
+        'best_career': best_career,
+        'worst_career': worst_career,
+    }
+    return render(request, 'analytics/career_roi.html', context)

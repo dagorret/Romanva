@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}Predicción de Abandono Estudiantil - Romanova{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>🎯 Predicción de Abandono Estudiantil (Churn Prediction)</h2>
+    <p class="subtitle">Machine Learning con Random Forest para identificar estudiantes en riesgo</p>
+
+    <!-- Resumen Ejecutivo -->
+    <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin-bottom: 30px;">
+        <h3 style="margin-top: 0; color: white;">📊 Resumen Ejecutivo</h3>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 20px;">
+            <div style="text-align: center;">
+                <div style="font-size: 36px; font-weight: bold;">{{ total_students }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">Total Estudiantes</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 36px; font-weight: bold; color: #10b981;">{{ active_students }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">Activos</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 36px; font-weight: bold; color: #ef4444;">{{ churned_students }}</div>
+                <div style="font-size: 14px; opacity: 0.9;">Inactivos</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 36px; font-weight: bold;">{{ churn_rate }}%</div>
+                <div style="font-size: 14px; opacity: 0.9;">Tasa de Abandono</div>
+            </div>
+        </div>
+    </div>
+
+    {% if feature_importance %}
+    <!-- Importancia de Variables -->
+    <div class="card" style="margin-bottom: 30px;">
+        <h3>🔍 Factores más Importantes para Predecir Abandono</h3>
+        <p style="color: #6b7280; margin-bottom: 20px;">
+            El modelo Random Forest identificó qué variables tienen mayor impacto en la predicción.
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Variable</th>
+                    <th>Importancia (%)</th>
+                    <th>Visualización</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for feature in feature_importance %}
+                <tr>
+                    <td><strong>{{ feature.feature }}</strong></td>
+                    <td>{{ feature.importance }}%</td>
+                    <td>
+                        <div style="width: {{ feature.importance }}%; height: 24px; background: linear-gradient(90deg, #8b5cf6, #ec4899); border-radius: 4px;"></div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Estudiantes en Riesgo -->
+    {% if predictions %}
+    <div class="card">
+        <h3>⚠️ Estudiantes en Alto Riesgo de Abandono</h3>
+        <p style="color: #6b7280; margin-bottom: 10px;">
+            Top {{ high_risk_count }} estudiantes con mayor probabilidad de abandonar (>70%).
+            <strong>Acción recomendada:</strong> Contactar proactivamente y ofrecer soporte académico.
+        </p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Estudiante</th>
+                    <th>Probabilidad Abandono</th>
+                    <th>Nivel de Riesgo</th>
+                    <th>Días Sin Acceso</th>
+                    <th>Total Accesos</th>
+                    <th>Estado Actual</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pred in predictions %}
+                <tr>
+                    <td>{{ pred.user.fullname }}</td>
+                    <td>
+                        <strong style="color: {% if pred.churn_probability > 70 %}#dc3545{% elif pred.churn_probability > 40 %}#ffc107{% else %}#28a745{% endif %}">
+                            {{ pred.churn_probability }}%
+                        </strong>
+                    </td>
+                    <td>
+                        <span style="padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;
+                            {% if pred.risk_level == 'Alto' %}background: #fee; color: #dc3545;{% elif pred.risk_level == 'Medio' %}background: #fef3c7; color: #d97706;{% else %}background: #d1fae5; color: #065f46;{% endif %}">
+                            {{ pred.risk_level }}
+                        </span>
+                    </td>
+                    <td>{{ pred.days_since_access }}</td>
+                    <td>{{ pred.total_accesses }}</td>
+                    <td>
+                        <span style="font-size: 13px; {% if pred.actual_status == 'Inactivo' %}color: #dc3545;{% else %}color: #10b981;{% endif %}">
+                            {{ pred.actual_status }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert">
+        <p>No hay suficientes datos para entrenar el modelo predictivo (mínimo 10 estudiantes con historial).</p>
+    </div>
+    {% endif %}
+
+    <!-- Metodología -->
+    <div class="card" style="margin-top: 30px; background: #f9fafb;">
+        <h3>📚 Metodología</h3>
+        <ul style="color: #6b7280; line-height: 1.8;">
+            <li><strong>Algoritmo:</strong> Random Forest Classifier (50 árboles, profundidad máx: 5)</li>
+            <li><strong>Definición de "Abandono":</strong> Sin acceso en los últimos 30 días</li>
+            <li><strong>Variables de entrada:</strong> Accesos totales, cursos inscriptos, grupos, días sin acceso, accesos semanales</li>
+            <li><strong>Período de análisis:</strong> Últimos 90 días de actividad</li>
+            <li><strong>Normalización:</strong> StandardScaler para equilibrar escalas</li>
+        </ul>
+        <p style="margin-top: 20px; padding: 15px; background: white; border-left: 4px solid #7c3aed; color: #374151;">
+            <strong>💡 Insight gerencial:</strong> Los "Días Sin Acceso" y "Accesos Semanales" suelen ser los mejores predictores.
+            Estudiantes que pasan más de 15 días sin acceder tienen 70%+ probabilidad de abandono.
+        </p>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <a href="{% url 'analytics_menu' %}" class="button">← Volver al menú de estadísticas</a>
+    </div>
+</div>
+{% endblock %}
