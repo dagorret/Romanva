@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}Panel Personalizado{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="margin-bottom: 20px;">
+        <a href="{% url 'analytics_menu' %}" class="btn">← Volver al menú</a>
+    </div>
+
+    <h2 style="margin-top: 0;">🎛️ Panel Personalizado</h2>
+    <p class="muted">Selecciona variables y operaciones estadísticas para análisis personalizado</p>
+
+    <form method="post" style="margin-top: 24px;">
+        {% csrf_token %}
+
+        <div style="margin-bottom: 24px;">
+            <h3 style="margin-bottom: 12px;">1. Selecciona las variables a analizar</h3>
+            <div style="background: #f9fafb; padding: 16px; border-radius: 10px;">
+                {% for var in variables %}
+                <label style="display: block; margin-bottom: 10px; cursor: pointer;">
+                    <input type="checkbox" name="variables" value="{{ var.id }}"
+                           {% if var.id in selected_vars %}checked{% endif %}
+                           style="margin-right: 8px;">
+                    <strong>{{ var.name }}</strong>
+                    <span class="muted">({{ var.type }})</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+            <h3 style="margin-bottom: 12px;">2. Selecciona la operación estadística</h3>
+            <div style="background: #f9fafb; padding: 16px; border-radius: 10px;">
+                {% for op in operations %}
+                <label style="display: block; margin-bottom: 10px; cursor: pointer;">
+                    <input type="radio" name="operation" value="{{ op.id }}"
+                           {% if op.id == selected_operation %}checked{% endif %}
+                           style="margin-right: 8px;" required>
+                    <strong>{{ op.name }}</strong>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-success">Calcular estadísticas</button>
+    </form>
+
+    {% if results %}
+    <div style="margin-top: 30px; padding: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white;">
+        <h3 style="margin-top: 0; color: white;">Resultados del Análisis</h3>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 16px;">
+            {% for var_id, value in results.items %}
+            <div style="background: rgba(255,255,255,0.15); padding: 16px; border-radius: 10px; backdrop-filter: blur(10px);">
+                <div style="font-size: 12px; opacity: 0.9; margin-bottom: 4px;">
+                    {% for var in variables %}
+                        {% if var.id == var_id %}{{ var.name }}{% endif %}
+                    {% endfor %}
+                </div>
+                <div style="font-size: 28px; font-weight: 700;">{{ value }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3 style="margin-top: 0;">Guía de Operaciones Estadísticas</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Operación</th>
+                <th>Descripción</th>
+                <th>Uso recomendado</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Media</strong></td>
+                <td>Promedio aritmético de los valores</td>
+                <td>Para obtener el valor típico central</td>
+            </tr>
+            <tr>
+                <td><strong>Mediana</strong></td>
+                <td>Valor que divide los datos en dos mitades iguales</td>
+                <td>Cuando hay valores extremos que afectan la media</td>
+            </tr>
+            <tr>
+                <td><strong>Máximo/Mínimo</strong></td>
+                <td>Valores extremos en el conjunto de datos</td>
+                <td>Para identificar rangos y outliers</td>
+            </tr>
+            <tr>
+                <td><strong>Desviación estándar</strong></td>
+                <td>Medida de dispersión respecto a la media</td>
+                <td>Para evaluar la variabilidad de los datos</td>
+            </tr>
+            <tr>
+                <td><strong>Suma total</strong></td>
+                <td>Suma de todos los valores</td>
+                <td>Para obtener totales agregados</td>
+            </tr>
+            <tr>
+                <td><strong>Conteo</strong></td>
+                <td>Cantidad de elementos analizados</td>
+                <td>Para saber el tamaño de la muestra</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}

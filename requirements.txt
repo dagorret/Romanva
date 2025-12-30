@@ -1,0 +1,14 @@
+Django==5.1
+psycopg2-binary==2.9.10
+python-decouple==3.8
+django-extensions==3.2.3
+
+# Para estadísticas
+numpy==2.2.1
+pandas==2.2.3
+scipy==1.15.0
+matplotlib==3.10.0
+seaborn==0.13.2
+
+# Para exportar datos
+openpyxl==3.1.5

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Comparación entre Grupos{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="margin-bottom: 20px;">
+        <a href="{% url 'analytics_menu' %}" class="btn">← Volver al menú</a>
+    </div>
+
+    <h2 style="margin-top: 0;">⚖️ Comparación entre Grupos</h2>
+    <p class="muted">Métricas de acceso por grupo</p>
+
+    {% if group_stats %}
+    <table>
+        <thead>
+            <tr>
+                <th>Grupo</th>
+                <th>Curso</th>
+                <th>Miembros</th>
+                <th>Accesos</th>
+                <th>Tasa de acceso</th>
+                <th>Rendimiento</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stat in group_stats %}
+            <tr>
+                <td><strong>{{ stat.group.name }}</strong></td>
+                <td class="muted">{{ stat.group.course.shortname }}</td>
+                <td>{{ stat.members }}</td>
+                <td>{{ stat.accesses }}</td>
+                <td>{{ stat.access_rate }}%</td>
+                <td>
+                    {% if stat.access_rate >= 80 %}
+                        <span style="color: #15803d; font-weight: 600;">Excelente</span>
+                    {% elif stat.access_rate >= 60 %}
+                        <span style="color: #ca8a04; font-weight: 600;">Bueno</span>
+                    {% elif stat.access_rate >= 40 %}
+                        <span style="color: #ea580c; font-weight: 600;">Regular</span>
+                    {% else %}
+                        <span style="color: #991b1b; font-weight: 600;">Bajo</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="margin-top: 30px; padding: 20px; background: #fef3c7; border-radius: 12px;">
+        <h3 style="margin-top: 0; color: #854d0e;">Recomendaciones</h3>
+        <ul style="line-height: 1.8;">
+            <li>Grupos con baja tasa de acceso pueden requerir intervención pedagógica</li>
+            <li>Comparar grupos del mismo curso para identificar diferencias</li>
+            <li>Analizar factores que influyen en el rendimiento de cada grupo</li>
+        </ul>
+    </div>
+    {% else %}
+    <p class="muted">No hay datos de grupos disponibles.</p>
+    {% endif %}
+</div>
+{% endblock %}

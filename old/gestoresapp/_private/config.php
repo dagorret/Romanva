@@ -1,0 +1,1 @@
+/etc/gestoresapp/_private/config.php

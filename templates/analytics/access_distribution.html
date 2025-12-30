@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Distribución de Accesos{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="margin-bottom: 20px;">
+        <a href="{% url 'analytics_menu' %}" class="btn">← Volver al menú</a>
+    </div>
+
+    <h2 style="margin-top: 0;">📈 Distribución de Accesos</h2>
+    <p class="muted">Accesos diarios en los últimos 30 días</p>
+
+    {% if daily_accesses %}
+    <div style="margin: 30px 0;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Cantidad de accesos</th>
+                    <th>Visualización</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for day in daily_accesses %}
+                <tr>
+                    <td>{{ day.date }}</td>
+                    <td><strong>{{ day.count }}</strong></td>
+                    <td>
+                        <div style="background: #0d6efd; height: 20px; width: {{ day.count|add:0 }}px; max-width: 400px; border-radius: 4px;"></div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div style="padding: 20px; background: #f0f9ff; border-radius: 12px; margin-top: 30px;">
+        <h3 style="margin-top: 0; color: #0369a1;">Análisis de Distribución</h3>
+        <p>Esta visualización muestra cómo se distribuyen los accesos a lo largo del tiempo.</p>
+        <ul style="line-height: 1.8;">
+            <li>Picos pueden indicar fechas de entrega o evaluaciones</li>
+            <li>Valles pueden mostrar días festivos o fines de semana</li>
+            <li>Tendencias crecientes/decrecientes revelan patrones de uso</li>
+        </ul>
+    </div>
+    {% else %}
+    <p class="muted">No hay datos de acceso para mostrar.</p>
+    {% endif %}
+</div>
+{% endblock %}

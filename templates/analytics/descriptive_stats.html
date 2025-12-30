@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Estadísticas Descriptivas{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="margin-bottom: 20px;">
+        <a href="{% url 'analytics_menu' %}" class="btn">← Volver al menú</a>
+    </div>
+
+    <h2 style="margin-top: 0;">📊 Estadísticas Descriptivas</h2>
+    <p class="muted">Media, máximos, mínimos y tasas de acceso por curso</p>
+
+    {% if global_stats %}
+    <div style="background: #f0f9ff; padding: 20px; border-radius: 12px; margin: 20px 0;">
+        <h3 style="margin-top: 0; color: #0369a1;">Estadísticas Globales</h3>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
+            <div>
+                <div style="font-size: 14px; color: #6b7280;">Tasa media de acceso</div>
+                <div style="font-size: 24px; font-weight: 700; color: #0369a1;">{{ global_stats.avg_access_rate }}%</div>
+            </div>
+            <div>
+                <div style="font-size: 14px; color: #6b7280;">Tasa máxima</div>
+                <div style="font-size: 24px; font-weight: 700; color: #15803d;">{{ global_stats.max_access_rate }}%</div>
+            </div>
+            <div>
+                <div style="font-size: 14px; color: #6b7280;">Tasa mínima</div>
+                <div style="font-size: 24px; font-weight: 700; color: #be123c;">{{ global_stats.min_access_rate }}%</div>
+            </div>
+            <div>
+                <div style="font-size: 14px; color: #6b7280;">Cursos analizados</div>
+                <div style="font-size: 24px; font-weight: 700; color: #7c3aed;">{{ global_stats.total_courses }}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if stats %}
+    <h3>Detalle por Curso</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Curso</th>
+                <th>Inscriptos</th>
+                <th>Con acceso</th>
+                <th>Tasa de acceso</th>
+                <th>Días activo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stat in stats %}
+            <tr>
+                <td><strong>{{ stat.course.shortname }}</strong><br><span class="muted">{{ stat.course.fullname }}</span></td>
+                <td>{{ stat.enrolled_count }}</td>
+                <td>{{ stat.access_count }}</td>
+                <td>
+                    <span style="padding: 4px 10px; border-radius: 6px; font-weight: 600;
+                                 {% if stat.access_rate >= 80 %}background: #dcfce7; color: #15803d;
+                                 {% elif stat.access_rate >= 50 %}background: #fef3c7; color: #ca8a04;
+                                 {% else %}background: #fee2e2; color: #991b1b;{% endif %}">
+                        {{ stat.access_rate }}%
+                    </span>
+                </td>
+                <td>{{ stat.days_active|default:"N/A" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No hay datos disponibles para mostrar.</p>
+    {% endif %}
+</div>
+{% endblock %}
