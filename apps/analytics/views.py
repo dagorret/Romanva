@@ -1463,6 +1463,3 @@ def course_network(request):
         'total_students_analyzed': students.count(),
     }
     return render(request, 'analytics/course_network.html', context)
-
-
-@login_required
